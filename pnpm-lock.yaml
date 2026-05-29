@@ -12,9 +12,9 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
-  apps/obsidian-smart-review-plugin:
+  apps/smart-review-plugin:
     dependencies:
-      '@obsidian-smart-review/shared':
+      '@smart-review/shared':
         specifier: workspace:*
         version: link:../../packages/shared
     devDependencies:

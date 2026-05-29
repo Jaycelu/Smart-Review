@@ -6,7 +6,7 @@ import {
   summarizeReviewItems,
   type ReviewIndex,
   type ReviewItem
-} from "@obsidian-smart-review/shared";
+} from "@smart-review/shared";
 import type { SmartReviewSettings } from "./settings";
 import {
   assignOptionalOrder,

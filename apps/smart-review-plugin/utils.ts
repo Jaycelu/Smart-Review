@@ -1,6 +1,6 @@
 import type { CachedMetadata } from "obsidian";
 import { normalizePath } from "obsidian";
-import type { ReviewItem } from "@obsidian-smart-review/shared";
+import type { ReviewItem } from "@smart-review/shared";
 import { DEFAULT_SETTINGS } from "./settings";
 
 export type Frontmatter = Record<string, unknown>;

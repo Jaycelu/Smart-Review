@@ -8,8 +8,8 @@ docs/
 examples/
 
 # Obsidian plugin build output
-apps/obsidian-smart-review-plugin/main.js
-apps/obsidian-smart-review-plugin/main.js.map
+apps/smart-review-plugin/main.js
+apps/smart-review-plugin/main.js.map
 
 # OS / editor
 .DS_Store

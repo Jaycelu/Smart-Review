@@ -1,5 +1,5 @@
 import { ItemView, Notice, type WorkspaceLeaf } from "obsidian";
-import type { ReviewItem, ReviewRating, ReviewState } from "@obsidian-smart-review/shared";
+import type { ReviewItem, ReviewRating, ReviewState } from "@smart-review/shared";
 import type SmartReviewPlugin from "./main";
 import { REVIEW_RATINGS } from "./settings";
 import { formatLocalDateTime } from "./utils";
@@ -66,7 +66,7 @@ export class ReviewCenterView extends ItemView {
 
   private renderHeader(container: HTMLElement, index: SmartReviewPlugin["currentIndex"]): void {
     const header = container.createDiv({ cls: "smart-review-header" });
-    header.createEl("h1", { text: "Obsidian Smart Review" });
+    header.createEl("h1", { text: "Smart Review" });
     header.createEl("p", {
       text: "基于 Properties / YAML frontmatter 的插件内复习中心。",
       cls: "smart-review-subtitle"

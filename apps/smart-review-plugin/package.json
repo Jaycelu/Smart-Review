@@ -1,5 +1,5 @@
 {
-  "name": "@obsidian-smart-review/obsidian-plugin",
+  "name": "@smart-review/obsidian-plugin",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@obsidian-smart-review/shared": "workspace:*"
+    "@smart-review/shared": "workspace:*"
   },
   "devDependencies": {
     "builtin-modules": "^4.0.0",

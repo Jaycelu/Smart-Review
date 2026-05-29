@@ -1,4 +1,4 @@
-import type { ReviewIndex } from "@obsidian-smart-review/shared";
+import type { ReviewIndex } from "@smart-review/shared";
 
 export class SmartReviewStatusBar {
   constructor(

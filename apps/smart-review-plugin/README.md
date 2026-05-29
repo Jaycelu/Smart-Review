@@ -1,19 +1,19 @@
-# Obsidian Smart Review Plugin
+# Smart Review Plugin
 
 Obsidian 插件本体负责完整复习闭环：扫描 Properties / YAML frontmatter、打开 Review Center、显示状态栏计数、写回复习反馈、追加历史、生成 Markdown 复习中心和 AI 复习卡片 Payload。
 
 ## 构建
 
 ```bash
-cd obsidian-smart-review
+cd smart-review
 pnpm install
-pnpm --filter @obsidian-smart-review/obsidian-plugin build
+pnpm --filter @smart-review/obsidian-plugin build
 ```
 
 构建产物：
 
 ```text
-apps/obsidian-smart-review-plugin/main.js
+apps/smart-review-plugin/main.js
 ```
 
 ## 安装到 Obsidian
@@ -26,7 +26,7 @@ apps/obsidian-smart-review-plugin/main.js
 <Vault>/.obsidian/plugins/smart-review/styles.css
 ```
 
-启用插件后，点击 Ribbon 图标打开 Review Center。`Generate Smart Review Index` 命令仍保留，用于手动覆盖更新 `review-index.json`。
+启用插件后，点击 Ribbon 图标打开 Review Center。`Generate Review Index` 命令仍保留，用于手动覆盖更新 `review-index.json`。
 
 ## 文件策略
 

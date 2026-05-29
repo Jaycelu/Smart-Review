@@ -1,8 +1,8 @@
-# Obsidian Smart Review
+# Smart Review
 
-[中文说明](README.zh-CN.md) | [Plugin source](apps/obsidian-smart-review-plugin)
+[中文说明](README.zh-CN.md) | [Plugin source](apps/smart-review-plugin)
 
-Obsidian Smart Review is a review center for Obsidian notes that uses Properties / YAML frontmatter. It builds review queues from `next_review`, lets you complete reviews inside Obsidian, writes spaced-review metadata back to notes, records review history, and exports AI review-card prompt payloads.
+Smart Review is a review center for Obsidian notes that uses Properties / YAML frontmatter. It builds review queues from `next_review`, lets you complete reviews inside Obsidian, writes spaced-review metadata back to notes, records review history, and exports AI review-card prompt payloads.
 
 The Obsidian plugin works on its own and does not require any external companion app.
 
@@ -20,7 +20,7 @@ The Obsidian plugin works on its own and does not require any external companion
 
 ## Repository Structure
 
-- `apps/obsidian-smart-review-plugin`: Obsidian plugin source and build output.
+- `apps/smart-review-plugin`: Obsidian plugin source and build output.
 - `packages/shared`: Shared types, date parsing, and review-state logic.
 - `manifest.json` and `versions.json`: Root copies for Obsidian community submission.
 
@@ -34,15 +34,15 @@ pnpm build
 Build output for manual Obsidian installation:
 
 ```text
-apps/obsidian-smart-review-plugin/main.js
-apps/obsidian-smart-review-plugin/manifest.json
-apps/obsidian-smart-review-plugin/styles.css
+apps/smart-review-plugin/main.js
+apps/smart-review-plugin/manifest.json
+apps/smart-review-plugin/styles.css
 ```
 
 Install into a local vault:
 
 ```bash
-./scripts/install-obsidian-smart-review-plugin.sh "/path/to/your/vault"
+./scripts/install-smart-review-plugin.sh "/path/to/your/vault"
 ```
 
 The script copies the plugin files to:
@@ -54,7 +54,7 @@ The script copies the plugin files to:
 ## Obsidian Commands
 
 - `Open Review Center`
-- `Generate Smart Review Index`
+- `Generate Review Index`
 - `Refresh Review Data`
 - `Mark Current Note Reviewed`
 - `Generate Daily Review Markdown`

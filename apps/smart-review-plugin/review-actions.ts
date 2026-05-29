@@ -5,7 +5,7 @@ import {
   getLocalDateString,
   normalizeDate,
   type ReviewRating
-} from "@obsidian-smart-review/shared";
+} from "@smart-review/shared";
 import type { SmartReviewSettings } from "./settings";
 import {
   ensureParentFolder,

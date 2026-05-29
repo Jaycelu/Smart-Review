@@ -1,5 +1,5 @@
 import type { App } from "obsidian";
-import type { ReviewIndex, ReviewItem } from "@obsidian-smart-review/shared";
+import type { ReviewIndex, ReviewItem } from "@smart-review/shared";
 
 const DUE_STATES = new Set<ReviewItem["review_state"]>(["overdue", "today"]);
 

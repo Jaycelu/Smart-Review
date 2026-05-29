@@ -1,5 +1,5 @@
 import { Notice, Plugin, type TFile } from "obsidian";
-import type { ReviewIndex, ReviewRating } from "@obsidian-smart-review/shared";
+import type { ReviewIndex, ReviewRating } from "@smart-review/shared";
 import { buildAiReviewCardsPayload } from "./ai-cards";
 import { buildDailyReviewMarkdown } from "./markdown-export";
 import { markFileReviewed } from "./review-actions";
@@ -39,8 +39,8 @@ export default class SmartReviewPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "generate-obsidian-smart-review",
-      name: "Generate Smart Review Index",
+      id: "generate-smart-review",
+      name: "Generate Review Index",
       callback: () => {
         void this.generateReviewIndex();
       }

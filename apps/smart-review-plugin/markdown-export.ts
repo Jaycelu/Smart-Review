@@ -1,4 +1,4 @@
-import type { ReviewIndex, ReviewItem } from "@obsidian-smart-review/shared";
+import type { ReviewIndex, ReviewItem } from "@smart-review/shared";
 import { formatLocalDateTime } from "./utils";
 
 export function buildDailyReviewMarkdown(index: ReviewIndex): string {

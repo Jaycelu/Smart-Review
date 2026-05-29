@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import type ReviewSmartReviewPlugin from "./main";
-import type { ReviewRating } from "@obsidian-smart-review/shared";
+import type SmartReviewPlugin from "./main";
+import type { ReviewRating } from "@smart-review/shared";
 
 export interface SmartReviewSettings {
   vaultName: string;
@@ -49,7 +49,7 @@ export const DEFAULT_SETTINGS: SmartReviewSettings = {
 export const REVIEW_RATINGS: ReviewRating[] = ["again", "hard", "good", "easy"];
 
 export class SmartReviewSettingTab extends PluginSettingTab {
-  constructor(app: App, private readonly plugin: ReviewSmartReviewPlugin) {
+  constructor(app: App, private readonly plugin: SmartReviewPlugin) {
     super(app, plugin);
   }
 
@@ -57,7 +57,7 @@ export class SmartReviewSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Obsidian Smart Review" });
+    containerEl.createEl("h2", { text: "Smart Review" });
     containerEl.createEl("p", {
       text: "插件本体可独立完成复习队列、Review Center、复习反馈、历史记录和 AI Payload 生成。",
       cls: "smart-review-setting-note"

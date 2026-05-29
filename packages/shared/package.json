@@ -1,5 +1,5 @@
 {
-  "name": "@obsidian-smart-review/shared",
+  "name": "@smart-review/shared",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",

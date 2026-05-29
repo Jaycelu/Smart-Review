@@ -8,10 +8,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 usage() {
   cat <<EOF
 Usage:
-  ./scripts/install-obsidian-smart-review-plugin.sh "/path/to/your/vault"
+  ./scripts/install-smart-review-plugin.sh "/path/to/your/vault"
 
 Example for iCloud Obsidian vaults:
-  ./scripts/install-obsidian-smart-review-plugin.sh "\$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/YourVaultName"
+  ./scripts/install-smart-review-plugin.sh "\$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/YourVaultName"
 EOF
 }
 
@@ -32,7 +32,7 @@ if ! command -v corepack >/dev/null 2>&1; then
   exit 1
 fi
 
-PLUGIN_SOURCE_DIR="$REPO_ROOT/apps/obsidian-smart-review-plugin"
+PLUGIN_SOURCE_DIR="$REPO_ROOT/apps/smart-review-plugin"
 PLUGIN_TARGET_DIR="$VAULT_PATH/.obsidian/plugins/$PLUGIN_ID"
 
 echo "Repository: $REPO_ROOT"
@@ -62,11 +62,11 @@ cp "$PLUGIN_SOURCE_DIR/manifest.json" "$PLUGIN_TARGET_DIR/manifest.json"
 cp "$PLUGIN_SOURCE_DIR/styles.css" "$PLUGIN_TARGET_DIR/styles.css"
 
 echo
-echo "Installed Obsidian Smart Review plugin successfully."
+echo "Installed Smart Review plugin successfully."
 echo
 echo "Next steps:"
 echo "  1. Open Obsidian."
-echo "  2. Enable the community plugin: Obsidian Smart Review."
+echo "  2. Enable the community plugin: Smart Review."
 echo "  3. Click the Ribbon icon to open Review Center."
-echo "  4. Run Command Palette: Generate Smart Review Index if you want to overwrite review-index.json manually."
+echo "  4. Run Command Palette: Generate Review Index if you want to overwrite review-index.json manually."
 echo "  5. Check that this file exists: $VAULT_PATH/review-index.json"

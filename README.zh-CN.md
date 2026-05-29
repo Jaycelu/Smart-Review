@@ -1,6 +1,6 @@
-# Obsidian Smart Review
+# Smart Review
 
-[English](README.md) | [插件源码](apps/obsidian-smart-review-plugin)
+[English](README.md) | [插件源码](apps/smart-review-plugin)
 
 基于 Obsidian Properties / YAML frontmatter 的智能复习系统，让笔记按照 `next_review` 自动进入复习队列，并支持复习完成、间隔重复、复习历史和 AI 复习卡片。
 
@@ -20,7 +20,7 @@
 
 ## 项目结构
 
-- `apps/obsidian-smart-review-plugin`: Obsidian Smart Review 插件，负责扫描、Review Center、状态栏、复习反馈、Markdown 导出和 AI Payload。
+- `apps/smart-review-plugin`: Smart Review 插件，负责扫描、Review Center、状态栏、复习反馈、Markdown 导出和 AI Payload。
 - `packages/shared`: 复用类型、日期解析和复习状态计算逻辑。
 - `manifest.json` / `versions.json`: 放在仓库根目录，供 Obsidian 社区插件提交读取。
 
@@ -38,7 +38,7 @@
 ## 安装与构建
 
 ```bash
-cd obsidian-smart-review
+cd smart-review
 pnpm install
 pnpm build
 ```
@@ -46,27 +46,27 @@ pnpm build
 构建完成后，Obsidian 插件入口会生成在：
 
 ```text
-apps/obsidian-smart-review-plugin/main.js
+apps/smart-review-plugin/main.js
 ```
 
 推荐使用安装脚本：
 
 ```bash
-./scripts/install-obsidian-smart-review-plugin.sh "/path/to/your/vault"
+./scripts/install-smart-review-plugin.sh "/path/to/your/vault"
 ```
 
 iCloud 中的 Obsidian Vault 通常位于类似路径：
 
 ```bash
-./scripts/install-obsidian-smart-review-plugin.sh "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/<你的Vault名>"
+./scripts/install-smart-review-plugin.sh "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/<你的Vault名>"
 ```
 
 脚本会执行构建，并复制以下文件到 `<Vault>/.obsidian/plugins/smart-review/`：
 
 ```text
-apps/obsidian-smart-review-plugin/manifest.json
-apps/obsidian-smart-review-plugin/main.js
-apps/obsidian-smart-review-plugin/styles.css
+apps/smart-review-plugin/manifest.json
+apps/smart-review-plugin/main.js
+apps/smart-review-plugin/styles.css
 ```
 
 ## Obsidian 内使用
@@ -83,7 +83,7 @@ Command Palette 至少包含：
 
 ```text
 Open Review Center
-Generate Smart Review Index
+Generate Review Index
 Refresh Review Data
 Mark Current Note Reviewed
 Generate Daily Review Markdown
