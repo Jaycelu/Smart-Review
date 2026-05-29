@@ -21,9 +21,9 @@ apps/obsidian-smart-review-plugin/main.js
 复制以下文件到你的 Vault：
 
 ```text
-<Vault>/.obsidian/plugins/obsidian-smart-review/manifest.json
-<Vault>/.obsidian/plugins/obsidian-smart-review/main.js
-<Vault>/.obsidian/plugins/obsidian-smart-review/styles.css
+<Vault>/.obsidian/plugins/smart-review/manifest.json
+<Vault>/.obsidian/plugins/smart-review/main.js
+<Vault>/.obsidian/plugins/smart-review/styles.css
 ```
 
 启用插件后，点击 Ribbon 图标打开 Review Center。`Generate Smart Review Index` 命令仍保留，用于手动覆盖更新 `review-index.json`。

@@ -61,7 +61,7 @@ iCloud 中的 Obsidian Vault 通常位于类似路径：
 ./scripts/install-obsidian-smart-review-plugin.sh "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/<你的Vault名>"
 ```
 
-脚本会执行构建，并复制以下文件到 `<Vault>/.obsidian/plugins/obsidian-smart-review/`：
+脚本会执行构建，并复制以下文件到 `<Vault>/.obsidian/plugins/smart-review/`：
 
 ```text
 apps/obsidian-smart-review-plugin/manifest.json

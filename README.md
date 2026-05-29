@@ -48,7 +48,7 @@ Install into a local vault:
 The script copies the plugin files to:
 
 ```text
-<Vault>/.obsidian/plugins/obsidian-smart-review/
+<Vault>/.obsidian/plugins/smart-review/
 ```
 
 ## Obsidian Commands
