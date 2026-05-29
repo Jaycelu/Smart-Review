@@ -215,15 +215,15 @@
   padding: 0;
   border: 0;
   appearance: none;
-  background: transparent !important;
-  box-shadow: none !important;
+  background: transparent;
+  box-shadow: none;
   color: var(--text-normal);
   cursor: pointer;
   font-size: 16px;
   font-weight: 650;
   line-height: 1.35;
   text-align: left;
-  white-space: normal !important;
+  white-space: normal;
   overflow: visible;
   overflow-wrap: anywhere;
   word-break: break-word;
