@@ -1,0 +1,21 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Local-only project material, not part of the public Obsidian plugin repo
+apps/smart-review-companion-mac/
+docs/
+examples/
+
+# Obsidian plugin build output
+apps/obsidian-smart-review-plugin/main.js
+apps/obsidian-smart-review-plugin/main.js.map
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
+pnpm-debug.log*

@@ -1,0 +1,21 @@
+{
+  "name": "@obsidian-smart-review/obsidian-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@obsidian-smart-review/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "builtin-modules": "^4.0.0",
+    "esbuild": "^0.25.4",
+    "obsidian": "^1.8.7",
+    "typescript": "^5.8.3"
+  }
+}

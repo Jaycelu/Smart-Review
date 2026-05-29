@@ -1,0 +1,373 @@
+import { Notice, Plugin, type TFile } from "obsidian";
+import type { ReviewIndex, ReviewRating } from "@obsidian-smart-review/shared";
+import { buildAiReviewCardsPayload } from "./ai-cards";
+import { buildDailyReviewMarkdown } from "./markdown-export";
+import { markFileReviewed } from "./review-actions";
+import { ReviewCenterView, REVIEW_CENTER_VIEW_TYPE } from "./review-center-view";
+import { buildReviewIndex } from "./scanner";
+import { DEFAULT_SETTINGS, REVIEW_RATINGS, SmartReviewSettingTab, type SmartReviewSettings } from "./settings";
+import { SmartReviewStatusBar } from "./status-bar";
+import { ensureParentFolder, isMissingFileError, normalizeOutputPath } from "./utils";
+
+export default class SmartReviewPlugin extends Plugin {
+  settings: SmartReviewSettings = DEFAULT_SETTINGS;
+  currentIndex: ReviewIndex | null = null;
+  lastError: string | null = null;
+  private refreshTimer: ReturnType<typeof window.setTimeout> | null = null;
+  private statusBar: SmartReviewStatusBar | null = null;
+  private startupScanCompleted = false;
+
+  override async onload(): Promise<void> {
+    await this.loadSettings();
+
+    this.registerView(REVIEW_CENTER_VIEW_TYPE, (leaf) => new ReviewCenterView(leaf, this));
+    this.statusBar = new SmartReviewStatusBar(this.addStatusBarItem(), () => {
+      void this.openReviewCenter();
+    });
+    this.updateStatusBar();
+
+    this.addRibbonIcon("calendar-check", "Open Review Center", () => {
+      void this.openReviewCenter();
+    });
+
+    this.addCommand({
+      id: "open-review-center",
+      name: "Open Review Center",
+      callback: () => {
+        void this.openReviewCenter();
+      }
+    });
+
+    this.addCommand({
+      id: "generate-obsidian-smart-review",
+      name: "Generate Smart Review Index",
+      callback: () => {
+        void this.generateReviewIndex();
+      }
+    });
+
+    this.addCommand({
+      id: "refresh-review-data",
+      name: "Refresh Review Data",
+      callback: () => {
+        void this.refreshReviewData({ writeIndex: false, notice: true });
+      }
+    });
+
+    this.addCommand({
+      id: "mark-current-note-reviewed",
+      name: "Mark Current Note Reviewed",
+      callback: () => {
+        void this.markCurrentNoteReviewed(this.settings.defaultReviewRating);
+      }
+    });
+
+    for (const rating of REVIEW_RATINGS) {
+      this.addCommand({
+        id: `mark-current-note-reviewed-${rating}`,
+        name: `Mark Current Note Reviewed: ${rating}`,
+        callback: () => {
+          void this.markCurrentNoteReviewed(rating);
+        }
+      });
+    }
+
+    this.addCommand({
+      id: "generate-daily-review-markdown",
+      name: "Generate Daily Review Markdown",
+      callback: () => {
+        void this.generateDailyReviewMarkdown();
+      }
+    });
+
+    this.addCommand({
+      id: "generate-ai-review-cards-payload",
+      name: "Generate AI Review Cards Payload",
+      callback: () => {
+        void this.generateAiReviewCardsPayload();
+      }
+    });
+
+    this.addSettingTab(new SmartReviewSettingTab(this.app, this));
+    this.registerAutoRefreshEvents();
+    void this.loadReviewIndexSnapshot();
+    this.registerStartupScan();
+  }
+
+  override onunload(): void {
+    if (this.refreshTimer !== null) {
+      window.clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+    this.app.workspace.detachLeavesOfType(REVIEW_CENTER_VIEW_TYPE);
+  }
+
+  async loadSettings(): Promise<void> {
+    const loaded = (await this.loadData()) as Partial<SmartReviewSettings> | null;
+    this.settings = {
+      ...DEFAULT_SETTINGS,
+      ...loaded
+    };
+  }
+
+  async saveSettings(): Promise<void> {
+    await this.saveData(this.settings);
+  }
+
+  async openReviewCenter(): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(REVIEW_CENTER_VIEW_TYPE)[0];
+    const leaf = existing ?? this.app.workspace.getRightLeaf(false);
+    if (leaf === null) {
+      new Notice("Unable to open Review Center.");
+      return;
+    }
+
+    await leaf.setViewState({ type: REVIEW_CENTER_VIEW_TYPE, active: true });
+    this.app.workspace.revealLeaf(leaf);
+    if (this.currentIndex === null) {
+      await this.loadReviewIndexSnapshot();
+    }
+    this.renderReviewCenter();
+  }
+
+  async ensureReviewDataForView(): Promise<void> {
+    if (this.currentIndex !== null) {
+      return;
+    }
+
+    await this.loadReviewIndexSnapshot();
+    if (this.currentIndex === null && this.isMetadataLikelyReady()) {
+      await this.refreshReviewData({ writeIndex: false, notice: false });
+    }
+  }
+
+  async refreshReviewData(options: { writeIndex: boolean; notice: boolean }): Promise<ReviewIndex | null> {
+    try {
+      const index = buildReviewIndex(this.app, this.settings);
+      this.currentIndex = index;
+      this.lastError = null;
+
+      if (options.writeIndex) {
+        await this.writeReviewIndex(index);
+      }
+
+      this.updateStatusBar();
+      this.renderReviewCenter();
+
+      if (options.notice) {
+        new Notice(`Review data refreshed (${index.items.length} notes).`);
+      }
+
+      return index;
+    } catch (error) {
+      console.error("Failed to refresh review data", error);
+      this.lastError = error instanceof Error ? error.message : String(error);
+      this.updateStatusBar();
+      this.renderReviewCenter();
+      if (options.notice) {
+        new Notice("Failed to refresh review data. Check console for details.");
+      }
+      return null;
+    }
+  }
+
+  async generateReviewIndex(): Promise<void> {
+    const index = await this.refreshReviewData({ writeIndex: true, notice: false });
+    if (index === null) {
+      new Notice("Failed to generate review-index.json. Check console for details.");
+      return;
+    }
+
+    const outputPath = normalizeOutputPath(this.settings.outputPath);
+    new Notice(`Review index generated: ${outputPath} (${index.items.length} notes)`);
+  }
+
+  async markCurrentNoteReviewed(rating: ReviewRating = "good"): Promise<void> {
+    const file = this.app.workspace.getActiveFile();
+    if (file === null || file.extension !== "md") {
+      new Notice("Open a Markdown note before marking it reviewed.");
+      return;
+    }
+
+    await this.reviewFile(file, rating);
+  }
+
+  async reviewFileByPath(filePath: string, rating: ReviewRating): Promise<void> {
+    const file = this.app.vault.getFileByPath(filePath);
+    if (file === null) {
+      new Notice(`Note not found: ${filePath}`);
+      return;
+    }
+
+    await this.reviewFile(file, rating);
+  }
+
+  async generateDailyReviewMarkdown(): Promise<void> {
+    const index = this.currentIndex ?? (await this.refreshReviewData({ writeIndex: false, notice: false }));
+    if (index === null) {
+      new Notice("Unable to generate daily review Markdown without review data.");
+      return;
+    }
+
+    try {
+      const outputPath = normalizeOutputPath(this.settings.dailyMarkdownPath, DEFAULT_SETTINGS.dailyMarkdownPath);
+      await ensureParentFolder(this.app.vault.adapter, outputPath);
+      await this.app.vault.adapter.write(outputPath, buildDailyReviewMarkdown(index));
+      new Notice(`Daily review Markdown generated: ${outputPath}`);
+    } catch (error) {
+      console.error("Failed to generate daily review Markdown", error);
+      new Notice("Failed to generate daily review Markdown. Check console for details.");
+    }
+  }
+
+  async generateAiReviewCardsPayload(): Promise<void> {
+    const index = this.currentIndex ?? (await this.refreshReviewData({ writeIndex: false, notice: false }));
+    if (index === null) {
+      new Notice("Unable to generate AI review cards payload without review data.");
+      return;
+    }
+
+    try {
+      const indexPath = normalizeOutputPath(this.settings.outputPath);
+      const outputPath = normalizeOutputPath(this.settings.aiCardsPath, DEFAULT_SETTINGS.aiCardsPath);
+      const payload = await buildAiReviewCardsPayload(this.app, index, indexPath);
+      await ensureParentFolder(this.app.vault.adapter, outputPath);
+      await this.app.vault.adapter.write(outputPath, `${JSON.stringify(payload, null, 2)}\n`);
+      new Notice(`AI review cards payload generated: ${outputPath} (${payload.items.length} items)`);
+    } catch (error) {
+      console.error("Failed to generate AI review cards payload", error);
+      new Notice("Failed to generate AI review cards payload. Check console for details.");
+    }
+  }
+
+  updateStatusBar(): void {
+    this.statusBar?.update(this.currentIndex, this.settings.showStatusBarCount);
+  }
+
+  scheduleGenerateReviewIndex(): void {
+    if (!this.settings.autoRefresh) {
+      return;
+    }
+
+    if (this.refreshTimer !== null) {
+      window.clearTimeout(this.refreshTimer);
+    }
+
+    this.refreshTimer = window.setTimeout(() => {
+      this.refreshTimer = null;
+      void this.refreshReviewData({ writeIndex: true, notice: false });
+    }, 1_000);
+  }
+
+  private async reviewFile(file: TFile, rating: ReviewRating): Promise<void> {
+    try {
+      const result = await markFileReviewed(this.app, this.settings, file, rating);
+      await this.refreshReviewData({ writeIndex: true, notice: false });
+      new Notice(`Marked reviewed (${rating}): ${file.basename} -> ${result.nextReview}`);
+    } catch (error) {
+      console.error("Failed to mark note reviewed", error);
+      new Notice("Failed to mark note reviewed. Check console for details.");
+    }
+  }
+
+  private async writeReviewIndex(index: ReviewIndex): Promise<void> {
+    const outputPath = normalizeOutputPath(this.settings.outputPath);
+    await ensureParentFolder(this.app.vault.adapter, outputPath);
+    await this.app.vault.adapter.write(outputPath, JSON.stringify(index, null, 2));
+  }
+
+  private async loadReviewIndexSnapshot(): Promise<void> {
+    try {
+      const outputPath = normalizeOutputPath(this.settings.outputPath);
+      const raw = await this.app.vault.adapter.read(outputPath);
+      const parsed = JSON.parse(raw) as unknown;
+      if (!isReviewIndex(parsed)) {
+        return;
+      }
+
+      this.currentIndex = parsed;
+      this.lastError = null;
+      this.updateStatusBar();
+      this.renderReviewCenter();
+    } catch (error) {
+      if (!isMissingFileError(error)) {
+        console.warn("Failed to load existing review-index.json", error);
+      }
+    }
+  }
+
+  private registerStartupScan(): void {
+    if (!this.settings.scanOnStartup) {
+      return;
+    }
+
+    const runStartupScan = async () => {
+      if (this.startupScanCompleted || !this.isMetadataLikelyReady()) {
+        return;
+      }
+
+      this.startupScanCompleted = true;
+      await this.refreshReviewData({ writeIndex: true, notice: false });
+    };
+
+    this.registerEvent(
+      this.app.metadataCache.on("resolved", () => {
+        void runStartupScan();
+      })
+    );
+
+    this.app.workspace.onLayoutReady(() => {
+      window.setTimeout(() => {
+        void runStartupScan();
+      }, 1_500);
+    });
+  }
+
+  private isMetadataLikelyReady(): boolean {
+    return this.app.vault.getMarkdownFiles().length > 0;
+  }
+
+  private renderReviewCenter(): void {
+    for (const leaf of this.app.workspace.getLeavesOfType(REVIEW_CENTER_VIEW_TYPE)) {
+      const view = leaf.view;
+      if (view instanceof ReviewCenterView) {
+        view.render();
+      }
+    }
+  }
+
+  private registerAutoRefreshEvents(): void {
+    this.registerEvent(
+      this.app.metadataCache.on("changed", () => {
+        this.scheduleGenerateReviewIndex();
+      })
+    );
+
+    this.registerEvent(
+      this.app.vault.on("rename", () => {
+        this.scheduleGenerateReviewIndex();
+      })
+    );
+
+    this.registerEvent(
+      this.app.vault.on("delete", () => {
+        this.scheduleGenerateReviewIndex();
+      })
+    );
+  }
+}
+
+function isReviewIndex(value: unknown): value is ReviewIndex {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Partial<ReviewIndex>;
+  return (
+    typeof candidate.generated_at === "string" &&
+    typeof candidate.vault_name === "string" &&
+    typeof candidate.summary === "object" &&
+    candidate.summary !== null &&
+    Array.isArray(candidate.items)
+  );
+}

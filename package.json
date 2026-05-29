@@ -1,0 +1,21 @@
+{
+  "name": "obsidian-smart-review",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Obsidian Smart Review plugin and optional companion app workspace.",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter @obsidian-smart-review/obsidian-plugin dev",
+    "lint": "pnpm -r lint",
+    "audit:review": "node scripts/audit-review-index.js",
+    "analyze:history": "node scripts/analyze-review-history.js",
+    "generate:ai-cards": "node scripts/generate-ai-review-cards.js",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

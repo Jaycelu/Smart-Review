@@ -1,0 +1,3 @@
+packages:
+  - "apps/obsidian-smart-review-plugin"
+  - "packages/*"

@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-smart-review",
+  "name": "Obsidian Smart Review",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Smart review system based on Obsidian Properties / YAML frontmatter with Review Center, spaced review feedback, history, and AI payload export.",
+  "author": "Jayce",
+  "authorUrl": "",
+  "isDesktopOnly": false
+}
