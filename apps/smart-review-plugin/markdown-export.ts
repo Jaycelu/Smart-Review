@@ -1,33 +1,34 @@
 import type { ReviewIndex, ReviewItem } from "@smart-review/shared";
+import { t, type SmartReviewLocale } from "./i18n";
 import { formatLocalDateTime } from "./utils";
 
-export function buildDailyReviewMarkdown(index: ReviewIndex): string {
+export function buildDailyReviewMarkdown(index: ReviewIndex, locale: SmartReviewLocale = "zh"): string {
   const overdue = filterItems(index.items, "overdue");
   const today = filterItems(index.items, "today");
   const next7 = filterItems(index.items, "next_7_days");
 
   return [
-    "# 今日复习",
+    `# ${t(locale, "dailyTitle")}`,
     "",
-    `生成时间：${formatLocalDateTime()}`,
+    t(locale, "generatedAt", { time: formatLocalDateTime() }),
     "",
-    "## 已逾期",
+    `## ${t(locale, "mdOverdue")}`,
     "",
     renderList(overdue, (item) => {
-      const days = item.days_delta === null ? "" : `：逾期 ${Math.abs(item.days_delta)} 天`;
+      const days = item.days_delta === null ? "" : t(locale, "mdOverdueDays", { count: Math.abs(item.days_delta) });
       return `- ${toWikiLink(item)}${days}`;
-    }),
+    }, locale),
     "",
-    "## 今日",
+    `## ${t(locale, "mdToday")}`,
     "",
-    renderList(today, (item) => `- ${toWikiLink(item)}`),
+    renderList(today, (item) => `- ${toWikiLink(item)}`, locale),
     "",
-    "## 未来 7 天",
+    `## ${t(locale, "mdNext7")}`,
     "",
     renderList(next7, (item) => {
-      const days = item.days_delta === null ? "" : `：${item.days_delta} 天后`;
+      const days = item.days_delta === null ? "" : t(locale, "mdDaysLater", { count: item.days_delta });
       return `- ${toWikiLink(item)}${days}`;
-    }),
+    }, locale),
     ""
   ].join("\n");
 }
@@ -36,9 +37,9 @@ function filterItems(items: ReviewItem[], state: ReviewItem["review_state"]): Re
   return items.filter((item) => item.review_state === state);
 }
 
-function renderList(items: ReviewItem[], render: (item: ReviewItem) => string): string {
+function renderList(items: ReviewItem[], render: (item: ReviewItem) => string, locale: SmartReviewLocale): string {
   if (items.length === 0) {
-    return "- 暂无";
+    return t(locale, "mdEmpty");
   }
 
   return items.map(render).join("\n");

@@ -27,8 +27,12 @@ if [[ ! -d "$VAULT_PATH" ]]; then
   exit 1
 fi
 
-if ! command -v corepack >/dev/null 2>&1; then
-  echo "Error: corepack is required but was not found." >&2
+if command -v pnpm >/dev/null 2>&1; then
+  PNPM_COMMAND=(pnpm)
+elif command -v corepack >/dev/null 2>&1; then
+  PNPM_COMMAND=(corepack pnpm)
+else
+  echo "Error: pnpm or corepack is required but neither was found." >&2
   exit 1
 fi
 
@@ -43,7 +47,7 @@ echo
 cd "$REPO_ROOT"
 
 echo "Building plugin..."
-corepack pnpm build
+"${PNPM_COMMAND[@]}" build
 
 for file in main.js manifest.json styles.css; do
   if [[ ! -f "$PLUGIN_SOURCE_DIR/$file" ]]; then
@@ -67,6 +71,6 @@ echo
 echo "Next steps:"
 echo "  1. Open Obsidian."
 echo "  2. Enable the community plugin: Smart Review."
-echo "  3. Click the Ribbon icon to open Review Center."
-echo "  4. Run Command Palette: Generate Review Index if you want to overwrite review-index.json manually."
+echo "  3. Click the Ribbon icon to open Smart Review Center."
+echo "  4. Run Command Palette: Generate Review Widget Data if you want to overwrite review-index.json manually."
 echo "  5. Check that this file exists: $VAULT_PATH/review-index.json"

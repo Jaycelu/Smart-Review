@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type SmartReviewPlugin from "./main";
 import type { ReviewRating } from "@smart-review/shared";
+import { resolveSmartReviewLocale, t, type SmartReviewLanguageSetting } from "./i18n";
 
 export interface SmartReviewSettings {
   vaultName: string;
@@ -22,6 +23,7 @@ export interface SmartReviewSettings {
   defaultReviewRating: ReviewRating;
   scanOnStartup: boolean;
   showStatusBarCount: boolean;
+  language: SmartReviewLanguageSetting;
 }
 
 export const DEFAULT_SETTINGS: SmartReviewSettings = {
@@ -43,7 +45,8 @@ export const DEFAULT_SETTINGS: SmartReviewSettings = {
   aiCardsPath: "review-ai-cards.json",
   defaultReviewRating: "good",
   scanOnStartup: true,
-  showStatusBarCount: true
+  showStatusBarCount: true,
+  language: "auto"
 };
 
 export const REVIEW_RATINGS: ReviewRating[] = ["again", "hard", "good", "easy"];
@@ -55,17 +58,36 @@ export class SmartReviewSettingTab extends PluginSettingTab {
 
   override display(): void {
     const { containerEl } = this;
+    const locale = resolveSmartReviewLocale(this.plugin.settings.language);
     containerEl.empty();
 
     containerEl.createEl("h2", { text: "Smart Review" });
     containerEl.createEl("p", {
-      text: "插件本体可独立完成复习队列、Review Center、复习反馈、历史记录和 AI Payload 生成。",
+      text: t(locale, "settingsIntro"),
       cls: "smart-review-setting-note"
     });
 
     new Setting(containerEl)
-      .setName("Vault 名称")
-      .setDesc("用于 review-index.json 和 Obsidian URI。留空时使用当前 Vault 名称。")
+      .setName(t(locale, "languageName"))
+      .setDesc(t(locale, "languageDesc"))
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("auto", t(locale, "languageAuto"))
+          .addOption("en", t(locale, "languageEnglish"))
+          .addOption("zh", t(locale, "languageChinese"))
+          .setValue(this.plugin.settings.language)
+          .onChange(async (value) => {
+            this.plugin.settings.language = isSmartReviewLanguageSetting(value) ? value : DEFAULT_SETTINGS.language;
+            await this.plugin.saveSettings();
+            this.plugin.updateStatusBar();
+            this.plugin.renderReviewCenter();
+            this.display();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName(t(locale, "vaultName"))
+      .setDesc(t(locale, "vaultNameDesc"))
       .addText((text) =>
         text
           .setPlaceholder(this.app.vault.getName())
@@ -77,8 +99,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("review-index.json 输出路径")
-      .setDesc("覆盖写入的当前复习索引快照。默认：review-index.json")
+      .setName(t(locale, "outputPath"))
+      .setDesc(t(locale, "outputPathDesc"))
       .addText((text) =>
         text
           .setPlaceholder(DEFAULT_SETTINGS.outputPath)
@@ -90,8 +112,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("自动刷新")
-      .setDesc("元数据变化、文件重命名或删除后自动重新扫描并覆盖更新 review-index.json。")
+      .setName(t(locale, "autoRefresh"))
+      .setDesc(t(locale, "autoRefreshDesc"))
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.autoRefresh).onChange(async (value) => {
           this.plugin.settings.autoRefresh = value;
@@ -100,8 +122,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("忽略 inactive / archived / deleted 笔记")
-      .setDesc("开启后只包含空 status 和下方允许列表中的 status。关闭后不按 status 过滤。")
+      .setName(t(locale, "ignoreInactive"))
+      .setDesc(t(locale, "ignoreInactiveDesc"))
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.ignoreInactive).onChange(async (value) => {
           this.plugin.settings.ignoreInactive = value;
@@ -111,8 +133,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("允许纳入复习的 status")
-      .setDesc("英文逗号分隔。空 status 始终允许。默认：active,published,draft。")
+      .setName(t(locale, "allowedStatuses"))
+      .setDesc(t(locale, "allowedStatusesDesc"))
       .addText((text) =>
         text
           .setPlaceholder(DEFAULT_SETTINGS.allowedStatuses)
@@ -125,8 +147,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("忽略指定目录")
-      .setDesc("开启后跳过下方目录列表中的笔记。关闭后不按目录过滤。")
+      .setName(t(locale, "ignoreFolders"))
+      .setDesc(t(locale, "ignoreFoldersDesc"))
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.ignoreTemplateFolder).onChange(async (value) => {
           this.plugin.settings.ignoreTemplateFolder = value;
@@ -136,8 +158,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("忽略目录列表")
-      .setDesc("英文逗号分隔，路径相对 Vault 根目录。默认：99-模板/。例如：Templates/, 00-模板/")
+      .setName(t(locale, "ignoredFolderList"))
+      .setDesc(t(locale, "ignoredFolderListDesc"))
       .addText((text) =>
         text
           .setPlaceholder(DEFAULT_SETTINGS.ignoredFolderPrefixes)
@@ -150,12 +172,12 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("导出范围")
-      .setDesc("导出全部纳入扫描的笔记，或只导出逾期/今日/未来 7 天。")
+      .setName(t(locale, "exportScope"))
+      .setDesc(t(locale, "exportScopeDesc"))
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("all", "全部任务")
-          .addOption("due_only", "只导出待复习任务")
+          .addOption("all", t(locale, "allTasks"))
+          .addOption("due_only", t(locale, "dueOnly"))
           .setValue(this.plugin.settings.exportScope)
           .onChange(async (value) => {
             this.plugin.settings.exportScope = value === "due_only" ? "due_only" : "all";
@@ -165,8 +187,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("纳入复习的笔记类型")
-      .setDesc("按 frontmatter 的 type 字段过滤，英文逗号分隔。默认只纳入 article，避免 series / dashboard 导航页进入复习计划。留空表示不过滤。")
+      .setName(t(locale, "includedTypes"))
+      .setDesc(t(locale, "includedTypesDesc"))
       .addText((text) =>
         text
           .setPlaceholder(DEFAULT_SETTINGS.includedTypes)
@@ -179,11 +201,11 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Domain 过滤")
-      .setDesc("可选，英文逗号分隔。留空表示不过滤。")
+      .setName(t(locale, "domainFilter"))
+      .setDesc(t(locale, "domainFilterDesc"))
       .addText((text) =>
         text
-          .setPlaceholder("基础设施与运维, 知识管理与工作流")
+          .setPlaceholder(locale === "zh" ? "基础设施与运维, 知识管理与工作流" : "Infrastructure, Knowledge Management")
           .setValue(this.plugin.settings.domainFilter)
           .onChange(async (value) => {
             this.plugin.settings.domainFilter = value.trim();
@@ -192,11 +214,11 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Tag 过滤")
-      .setDesc("可选，英文逗号分隔。留空表示不过滤。")
+      .setName(t(locale, "tagFilter"))
+      .setDesc(t(locale, "tagFilterDesc"))
       .addText((text) =>
         text
-          .setPlaceholder("主题/Obsidian, 模块/云计算")
+          .setPlaceholder(locale === "zh" ? "主题/Obsidian, 模块/云计算" : "topic/Obsidian, module/cloud")
           .setValue(this.plugin.settings.tagFilter)
           .onChange(async (value) => {
             this.plugin.settings.tagFilter = value.trim();
@@ -205,8 +227,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("review-history.jsonl 输出路径")
-      .setDesc("追加写入的复习动作事件日志。默认：review-history.jsonl")
+      .setName(t(locale, "historyPath"))
+      .setDesc(t(locale, "historyPathDesc"))
       .addText((text) =>
         text
           .setPlaceholder(DEFAULT_SETTINGS.reviewHistoryPath)
@@ -218,8 +240,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("启用复习历史记录")
-      .setDesc("开启后每次复习反馈都会追加一行 JSONL。")
+      .setName(t(locale, "enableHistory"))
+      .setDesc(t(locale, "enableHistoryDesc"))
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.enableReviewHistory).onChange(async (value) => {
           this.plugin.settings.enableReviewHistory = value;
@@ -228,8 +250,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("今日复习 Markdown 输出路径")
-      .setDesc("覆盖写入的 Obsidian 原生复习中心。默认：00-总览/今日复习.md")
+      .setName(t(locale, "dailyMarkdownPath"))
+      .setDesc(t(locale, "dailyMarkdownPathDesc"))
       .addText((text) =>
         text
           .setPlaceholder(DEFAULT_SETTINGS.dailyMarkdownPath)
@@ -241,8 +263,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("AI 复习卡片 Payload 输出路径")
-      .setDesc("覆盖写入的 prompt_payload 文件，不调用远程 AI API。默认：review-ai-cards.json")
+      .setName(t(locale, "aiCardsPath"))
+      .setDesc(t(locale, "aiCardsPathDesc"))
       .addText((text) =>
         text
           .setPlaceholder(DEFAULT_SETTINGS.aiCardsPath)
@@ -254,8 +276,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("默认复习评分")
-      .setDesc("Mark Current Note Reviewed 使用的默认评分。")
+      .setName(t(locale, "defaultRating"))
+      .setDesc(t(locale, "defaultRatingDesc"))
       .addDropdown((dropdown) => {
         for (const rating of REVIEW_RATINGS) {
           dropdown.addOption(rating, rating);
@@ -269,8 +291,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("初始复习间隔天数")
-      .setDesc("新笔记没有复习历史时使用的基础间隔。")
+      .setName(t(locale, "intervalDays"))
+      .setDesc(t(locale, "intervalDaysDesc"))
       .addText((text) =>
         text
           .setPlaceholder(String(DEFAULT_SETTINGS.reviewIntervalDays))
@@ -282,8 +304,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("插件启动时自动扫描")
-      .setDesc("启动 Obsidian 后自动扫描当前 Vault，并刷新状态栏。")
+      .setName(t(locale, "scanStartup"))
+      .setDesc(t(locale, "scanStartupDesc"))
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.scanOnStartup).onChange(async (value) => {
           this.plugin.settings.scanOnStartup = value;
@@ -292,8 +314,8 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("状态栏显示复习计数")
-      .setDesc("在 Obsidian 底部状态栏显示今日和逾期数量，点击可打开 Review Center。")
+      .setName(t(locale, "showStatusBar"))
+      .setDesc(t(locale, "showStatusBarDesc"))
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.showStatusBarCount).onChange(async (value) => {
           this.plugin.settings.showStatusBarCount = value;
@@ -302,6 +324,10 @@ export class SmartReviewSettingTab extends PluginSettingTab {
         })
       );
   }
+}
+
+function isSmartReviewLanguageSetting(value: string): value is SmartReviewLanguageSetting {
+  return value === "auto" || value === "en" || value === "zh";
 }
 
 export function parseReviewIntervalDays(value: string): number {

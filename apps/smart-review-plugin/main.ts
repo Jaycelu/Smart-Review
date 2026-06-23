@@ -1,6 +1,9 @@
 import { Notice, Plugin, type TFile } from "obsidian";
 import type { ReviewIndex, ReviewRating } from "@smart-review/shared";
 import { buildAiReviewCardsPayload } from "./ai-cards";
+import { buildSmartReviewAnalytics } from "./analytics-service";
+import type { SmartReviewAnalytics } from "./analytics-types";
+import { resolveSmartReviewLocale, t, type SmartReviewLocale } from "./i18n";
 import { buildDailyReviewMarkdown } from "./markdown-export";
 import { markFileReviewed } from "./review-actions";
 import { ReviewCenterView, REVIEW_CENTER_VIEW_TYPE } from "./review-center-view";
@@ -12,6 +15,7 @@ import { ensureParentFolder, isMissingFileError, normalizeOutputPath } from "./u
 export default class SmartReviewPlugin extends Plugin {
   settings: SmartReviewSettings = DEFAULT_SETTINGS;
   currentIndex: ReviewIndex | null = null;
+  currentAnalytics: SmartReviewAnalytics | null = null;
   lastError: string | null = null;
   private refreshTimer: ReturnType<typeof window.setTimeout> | null = null;
   private statusBar: SmartReviewStatusBar | null = null;
@@ -26,13 +30,13 @@ export default class SmartReviewPlugin extends Plugin {
     });
     this.updateStatusBar();
 
-    this.addRibbonIcon("calendar-check", "Open Review Center", () => {
+    this.addRibbonIcon("calendar-check", t(this.locale, "openCenter"), () => {
       void this.openReviewCenter();
     });
 
     this.addCommand({
       id: "open-review-center",
-      name: "Open Review Center",
+      name: t(this.locale, "openCenter"),
       callback: () => {
         void this.openReviewCenter();
       }
@@ -40,7 +44,7 @@ export default class SmartReviewPlugin extends Plugin {
 
     this.addCommand({
       id: "generate-smart-review",
-      name: "Generate Review Index",
+      name: t(this.locale, "generateWidgetData"),
       callback: () => {
         void this.generateReviewIndex();
       }
@@ -48,7 +52,7 @@ export default class SmartReviewPlugin extends Plugin {
 
     this.addCommand({
       id: "refresh-review-data",
-      name: "Refresh Review Data",
+      name: t(this.locale, "refreshData"),
       callback: () => {
         void this.refreshReviewData({ writeIndex: false, notice: true });
       }
@@ -56,7 +60,7 @@ export default class SmartReviewPlugin extends Plugin {
 
     this.addCommand({
       id: "mark-current-note-reviewed",
-      name: "Mark Current Note Reviewed",
+      name: t(this.locale, "markCurrentReviewed"),
       callback: () => {
         void this.markCurrentNoteReviewed(this.settings.defaultReviewRating);
       }
@@ -74,7 +78,7 @@ export default class SmartReviewPlugin extends Plugin {
 
     this.addCommand({
       id: "generate-daily-review-markdown",
-      name: "Generate Daily Review Markdown",
+      name: t(this.locale, "generateDailyMarkdown"),
       callback: () => {
         void this.generateDailyReviewMarkdown();
       }
@@ -82,7 +86,7 @@ export default class SmartReviewPlugin extends Plugin {
 
     this.addCommand({
       id: "generate-ai-review-cards-payload",
-      name: "Generate AI Review Cards Payload",
+      name: t(this.locale, "generateAiCards"),
       callback: () => {
         void this.generateAiReviewCardsPayload();
       }
@@ -114,11 +118,15 @@ export default class SmartReviewPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
+  get locale(): SmartReviewLocale {
+    return resolveSmartReviewLocale(this.settings.language);
+  }
+
   async openReviewCenter(): Promise<void> {
     const existing = this.app.workspace.getLeavesOfType(REVIEW_CENTER_VIEW_TYPE)[0];
-    const leaf = existing ?? this.app.workspace.getRightLeaf(false);
+    const leaf = existing ?? this.app.workspace.getLeaf(true);
     if (leaf === null) {
-      new Notice("Unable to open Review Center.");
+      new Notice(t(this.locale, "unableOpenCenter"));
       return;
     }
 
@@ -144,7 +152,9 @@ export default class SmartReviewPlugin extends Plugin {
   async refreshReviewData(options: { writeIndex: boolean; notice: boolean }): Promise<ReviewIndex | null> {
     try {
       const index = buildReviewIndex(this.app, this.settings);
+      const analytics = await buildSmartReviewAnalytics(this.app, this.settings, index);
       this.currentIndex = index;
+      this.currentAnalytics = analytics;
       this.lastError = null;
 
       if (options.writeIndex) {
@@ -155,17 +165,18 @@ export default class SmartReviewPlugin extends Plugin {
       this.renderReviewCenter();
 
       if (options.notice) {
-        new Notice(`Review data refreshed (${index.items.length} notes).`);
+        new Notice(t(this.locale, "dataRefreshed", { count: index.items.length }));
       }
 
       return index;
     } catch (error) {
       console.error("Failed to refresh review data", error);
       this.lastError = error instanceof Error ? error.message : String(error);
+      this.currentAnalytics = null;
       this.updateStatusBar();
       this.renderReviewCenter();
       if (options.notice) {
-        new Notice("Failed to refresh review data. Check console for details.");
+        new Notice(t(this.locale, "reviewFailed"));
       }
       return null;
     }
@@ -174,18 +185,18 @@ export default class SmartReviewPlugin extends Plugin {
   async generateReviewIndex(): Promise<void> {
     const index = await this.refreshReviewData({ writeIndex: true, notice: false });
     if (index === null) {
-      new Notice("Failed to generate review-index.json. Check console for details.");
+      new Notice(t(this.locale, "generateIndexFailed"));
       return;
     }
 
     const outputPath = normalizeOutputPath(this.settings.outputPath);
-    new Notice(`Review index generated: ${outputPath} (${index.items.length} notes)`);
+    new Notice(t(this.locale, "indexGenerated", { path: outputPath, count: index.items.length }));
   }
 
   async markCurrentNoteReviewed(rating: ReviewRating = "good"): Promise<void> {
     const file = this.app.workspace.getActiveFile();
     if (file === null || file.extension !== "md") {
-      new Notice("Open a Markdown note before marking it reviewed.");
+      new Notice(t(this.locale, "openMarkdownBeforeReview"));
       return;
     }
 
@@ -195,7 +206,7 @@ export default class SmartReviewPlugin extends Plugin {
   async reviewFileByPath(filePath: string, rating: ReviewRating): Promise<void> {
     const file = this.app.vault.getFileByPath(filePath);
     if (file === null) {
-      new Notice(`Note not found: ${filePath}`);
+      new Notice(t(this.locale, "noteNotFound", { path: filePath }));
       return;
     }
 
@@ -205,25 +216,25 @@ export default class SmartReviewPlugin extends Plugin {
   async generateDailyReviewMarkdown(): Promise<void> {
     const index = this.currentIndex ?? (await this.refreshReviewData({ writeIndex: false, notice: false }));
     if (index === null) {
-      new Notice("Unable to generate daily review Markdown without review data.");
+      new Notice(t(this.locale, "dailyMarkdownNoData"));
       return;
     }
 
     try {
       const outputPath = normalizeOutputPath(this.settings.dailyMarkdownPath, DEFAULT_SETTINGS.dailyMarkdownPath);
       await ensureParentFolder(this.app.vault.adapter, outputPath);
-      await this.app.vault.adapter.write(outputPath, buildDailyReviewMarkdown(index));
-      new Notice(`Daily review Markdown generated: ${outputPath}`);
+      await this.app.vault.adapter.write(outputPath, buildDailyReviewMarkdown(index, this.locale));
+      new Notice(t(this.locale, "dailyMarkdownGenerated", { path: outputPath }));
     } catch (error) {
       console.error("Failed to generate daily review Markdown", error);
-      new Notice("Failed to generate daily review Markdown. Check console for details.");
+      new Notice(t(this.locale, "dailyMarkdownFailed"));
     }
   }
 
   async generateAiReviewCardsPayload(): Promise<void> {
     const index = this.currentIndex ?? (await this.refreshReviewData({ writeIndex: false, notice: false }));
     if (index === null) {
-      new Notice("Unable to generate AI review cards payload without review data.");
+      new Notice(t(this.locale, "aiCardsNoData"));
       return;
     }
 
@@ -233,15 +244,15 @@ export default class SmartReviewPlugin extends Plugin {
       const payload = await buildAiReviewCardsPayload(this.app, index, indexPath);
       await ensureParentFolder(this.app.vault.adapter, outputPath);
       await this.app.vault.adapter.write(outputPath, `${JSON.stringify(payload, null, 2)}\n`);
-      new Notice(`AI review cards payload generated: ${outputPath} (${payload.items.length} items)`);
+      new Notice(t(this.locale, "aiCardsGenerated", { path: outputPath, count: payload.items.length }));
     } catch (error) {
       console.error("Failed to generate AI review cards payload", error);
-      new Notice("Failed to generate AI review cards payload. Check console for details.");
+      new Notice(t(this.locale, "aiCardsFailed"));
     }
   }
 
   updateStatusBar(): void {
-    this.statusBar?.update(this.currentIndex, this.settings.showStatusBarCount);
+    this.statusBar?.update(this.currentIndex, this.settings.showStatusBarCount, this.locale);
   }
 
   scheduleGenerateReviewIndex(): void {
@@ -263,10 +274,10 @@ export default class SmartReviewPlugin extends Plugin {
     try {
       const result = await markFileReviewed(this.app, this.settings, file, rating);
       await this.refreshReviewData({ writeIndex: true, notice: false });
-      new Notice(`Marked reviewed (${rating}): ${file.basename} -> ${result.nextReview}`);
+      new Notice(t(this.locale, "reviewedNotice", { rating, title: file.basename, nextReview: result.nextReview }));
     } catch (error) {
       console.error("Failed to mark note reviewed", error);
-      new Notice("Failed to mark note reviewed. Check console for details.");
+      new Notice(t(this.locale, "reviewFailed"));
     }
   }
 
@@ -286,6 +297,7 @@ export default class SmartReviewPlugin extends Plugin {
       }
 
       this.currentIndex = parsed;
+      this.currentAnalytics = await buildSmartReviewAnalytics(this.app, this.settings, parsed);
       this.lastError = null;
       this.updateStatusBar();
       this.renderReviewCenter();
@@ -327,7 +339,7 @@ export default class SmartReviewPlugin extends Plugin {
     return this.app.vault.getMarkdownFiles().length > 0;
   }
 
-  private renderReviewCenter(): void {
+  renderReviewCenter(): void {
     for (const leaf of this.app.workspace.getLeavesOfType(REVIEW_CENTER_VIEW_TYPE)) {
       const view = leaf.view;
       if (view instanceof ReviewCenterView) {

@@ -1,0 +1,56 @@
+name: Release Obsidian plugin
+
+on:
+  push:
+    tags:
+      - "[0-9]*.[0-9]*.[0-9]*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify tag matches manifest version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if ! echo "$TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Tag $TAG is not a plain SemVer version like 0.1.1" >&2
+            exit 1
+          fi
+          VERSION="$(node -p "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).version")"
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "Tag $TAG does not match manifest.json version $VERSION" >&2
+            exit 1
+          fi
+
+      - name: Build release assets
+        run: pnpm run release:plugin
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            dist/plugin/main.js \
+            dist/plugin/manifest.json \
+            dist/plugin/styles.css \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes

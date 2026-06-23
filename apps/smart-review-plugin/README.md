@@ -1,6 +1,8 @@
 # Smart Review Plugin
 
-Obsidian 插件本体负责完整复习闭环：扫描 Properties / YAML frontmatter、打开 Review Center、显示状态栏计数、写回复习反馈、追加历史、生成 Markdown 复习中心和 AI 复习卡片 Payload。
+Smart Review 插件本体负责完整复习闭环：扫描 Properties / YAML frontmatter、打开 Smart Review Center、显示状态栏计数、写回复习反馈、追加历史、生成 Markdown 复习中心和 AI 复习卡片 Payload。
+
+UI 支持 English / 简体中文，默认跟随 Obsidian 应用语言，也可以在插件设置中手动切换。样式使用 Obsidian 官方主题变量，适配浅色和深色模式。
 
 ## 构建
 
@@ -26,7 +28,7 @@ apps/smart-review-plugin/main.js
 <Vault>/.obsidian/plugins/smart-review/styles.css
 ```
 
-启用插件后，点击 Ribbon 图标打开 Review Center。`Generate Review Index` 命令仍保留，用于手动覆盖更新 `review-index.json`。
+启用插件后，点击 Ribbon 图标打开 Smart Review Center。`Generate Review Widget Data` 命令用于手动覆盖更新 `review-index.json`。
 
 ## 文件策略
 

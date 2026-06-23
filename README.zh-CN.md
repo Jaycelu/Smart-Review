@@ -1,26 +1,53 @@
 # Smart Review
 
-[English](README.md) | [插件源码](apps/smart-review-plugin)
+语言 / Languages：[English](README.md) | [简体中文](README.zh-CN.md)
+
+[插件源码](apps/smart-review-plugin)
 
 基于 Obsidian Properties / YAML frontmatter 的智能复习系统，让笔记按照 `next_review` 自动进入复习队列，并支持复习完成、间隔重复、复习历史和 AI 复习卡片。
 
 当前主线是 Obsidian 插件本体独立可用。用户安装插件后，不需要额外安装 Mac App，也能在 Obsidian 内完成复习闭环。
 
+## 语言与主题
+
+- UI 支持 English 和简体中文。
+- 默认语言为 `自动`，跟随 Obsidian 应用语言。
+- 可以在 `Settings -> Smart Review -> 语言` 中手动切换。
+- UI 使用 Obsidian 官方主题变量，适配浅色和深色模式，包括卡片、热力图、下钻详情、进度条和状态栏。
+
 ## 核心能力
 
 - 直接读取 Obsidian 笔记 Properties / YAML frontmatter
 - 根据 `next_review` 自动生成复习队列
-- 在插件内提供 Review Center 复习中心
-- 状态栏显示今日复习和逾期数量，点击可打开 Review Center
+- 在插件内提供融合式 Smart Review Center
+- 状态栏显示今日复习和逾期数量，点击可打开 Smart Review Center
 - 支持 `again` / `hard` / `good` / `easy` 复习反馈
 - 自动写回下一次复习日期、复习评分、间隔、ease 和 lapses
 - 自动追加复习历史
 - 生成 Obsidian 原生今日复习 Markdown
 - 生成 AI 复习卡片 `prompt_payload`，不直接调用外部 AI API
 
+## Smart Review Center
+
+Smart Review Center 是插件内置的单一主页面，不需要额外安装 Mac App，也不会拆成第二个独立 Dashboard。
+
+页面包含：
+
+- 今日复习计划：按已逾期、今日复习、未来 7 天分组。
+- 任务跳转：点击标题直接打开对应 Obsidian 笔记。
+- 复习反馈：每条任务支持 `Again` / `Hard` / `Good` / `Easy`。
+- 数据总览：今日复习、逾期任务、本周完成和知识库健康分。
+- Task Flow：今日完成率进度条。
+- 复习活跃热力图：基于 `review-history.jsonl`。
+- 笔记创建热力图：基于 `frontmatter.created`、文件创建时间或文件修改时间。
+- 领域、标签和复习评分分布。
+- 分布行可点击查看详情，长列表默认折叠，避免页面杂乱。
+
+健康分是辅助运营指标，综合复习覆盖率、逾期控制、最近复习活跃度、元数据完整度和 AI 卡片准备度；它不代表知识质量的绝对水平。
+
 ## 项目结构
 
-- `apps/smart-review-plugin`: Smart Review 插件，负责扫描、Review Center、状态栏、复习反馈、Markdown 导出和 AI Payload。
+- `apps/smart-review-plugin`: Smart Review 插件，负责扫描、Smart Review Center、状态栏、复习反馈、Markdown 导出和 AI Payload。
 - `packages/shared`: 复用类型、日期解析和复习状态计算逻辑。
 - `manifest.json` / `versions.json`: 放在仓库根目录，供 Obsidian 社区插件提交读取。
 
@@ -73,17 +100,17 @@ apps/smart-review-plugin/styles.css
 
 启用插件后：
 
-1. 点击左侧 Ribbon 图标打开 Review Center。
-2. 在 Review Center 查看已逾期、今日复习、未来 7 天、更远未来和日期无效任务。
+1. 点击左侧 Ribbon 图标打开 Smart Review Center。
+2. 在 Smart Review Center 查看今日复习计划、数据总览、热力图和分布分析。
 3. 点击任务标题打开对应笔记。
 4. 点击 `Again` / `Hard` / `Good` / `Easy` 完成复习反馈。
-5. 使用操作区按钮刷新数据、重新生成 `review-index.json`、生成今日复习 Markdown、生成 AI 卡片 Payload 或打开插件设置。
+5. 使用顶部按钮刷新数据、生成今日复习 Markdown、生成 AI 卡片 Payload 或打开插件设置。
 
 Command Palette 至少包含：
 
 ```text
-Open Review Center
-Generate Review Index
+Open Smart Review Center
+Generate Review Widget Data
 Refresh Review Data
 Mark Current Note Reviewed
 Generate Daily Review Markdown
@@ -125,10 +152,21 @@ review_lapses: 0
 pnpm dev
 pnpm typecheck
 pnpm lint
-pnpm test
 ```
 
 ## 发布文件
+
+发布前先更新根目录 `manifest.json` 里的 `version`，然后执行：
+
+```bash
+pnpm run release:plugin
+```
+
+该命令会同步插件 manifest、根目录 manifest、各 package 版本和 `versions.json`，构建插件，并把可上传的 Release 文件复制到：
+
+```text
+dist/plugin/
+```
 
 GitHub Release 需要上传：
 
@@ -138,4 +176,24 @@ manifest.json
 styles.css
 ```
 
-Release tag 必须和 `manifest.json` 中的 `version` 完全一致，例如 `0.1.0`。
+Release tag 必须和 `manifest.json` 中的 `version` 完全一致，例如 `0.2.0`。不要加 `v` 前缀。
+
+推送 `0.2.0` 这类 tag 会自动触发 GitHub Actions 发版；如果 tag 和 `manifest.json.version` 不一致，workflow 会直接失败。
+
+## 用户如何更新插件
+
+发布 GitHub Release 后，用户可以在 Obsidian 的 Community plugins 页面更新。社区插件目录正式收录前，可以手动下载 Release assets：
+
+```text
+main.js
+manifest.json
+styles.css
+```
+
+复制到：
+
+```text
+<Vault>/.obsidian/plugins/smart-review/
+```
+
+然后重启 Obsidian，或禁用再启用 Smart Review。

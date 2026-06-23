@@ -1,16 +1,19 @@
 {
   "name": "smart-review",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Smart Review plugin workspace.",
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
+    "build:plugin": "pnpm --filter @smart-review/shared build && pnpm --filter @smart-review/obsidian-plugin build",
     "dev": "pnpm --filter @smart-review/obsidian-plugin dev",
     "lint": "pnpm -r lint",
     "audit:review": "node scripts/audit-review-index.js",
     "analyze:history": "node scripts/analyze-review-history.js",
     "generate:ai-cards": "node scripts/generate-ai-review-cards.js",
+    "release:plugin": "pnpm run sync:plugin-release && pnpm run build:plugin && node scripts/prepare-plugin-release.js",
+    "sync:plugin-release": "node scripts/sync-plugin-release.js",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"
   },

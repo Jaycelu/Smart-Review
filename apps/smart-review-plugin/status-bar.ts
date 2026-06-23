@@ -1,4 +1,5 @@
 import type { ReviewIndex } from "@smart-review/shared";
+import { t, type SmartReviewLocale } from "./i18n";
 
 export class SmartReviewStatusBar {
   constructor(
@@ -11,7 +12,7 @@ export class SmartReviewStatusBar {
     };
   }
 
-  update(index: ReviewIndex | null, visible: boolean): void {
+  update(index: ReviewIndex | null, visible: boolean, locale: SmartReviewLocale): void {
     this.statusEl.toggleClass("smart-review-status-bar-hidden", !visible);
     if (!visible) {
       this.statusEl.setText("");
@@ -20,8 +21,8 @@ export class SmartReviewStatusBar {
 
     const today = index?.summary.today ?? 0;
     const overdue = index?.summary.overdue ?? 0;
-    this.statusEl.setText(overdue > 0 ? `📚 今日 ${today}｜逾期 ${overdue}` : `📚 今日 ${today}`);
-    this.statusEl.setAttr("aria-label", "Open Review Center");
-    this.statusEl.setAttr("title", "Open Review Center");
+    this.statusEl.setText(overdue > 0 ? t(locale, "statusBarOverdue", { today, overdue }) : t(locale, "statusBarToday", { today }));
+    this.statusEl.setAttr("aria-label", t(locale, "openCenter"));
+    this.statusEl.setAttr("title", t(locale, "openCenter"));
   }
 }
