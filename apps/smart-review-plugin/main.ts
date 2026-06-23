@@ -43,7 +43,7 @@ export default class SmartReviewPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "generate-smart-review",
+      id: "generate-review-data",
       name: t(this.locale, "generateWidgetData"),
       callback: () => {
         void this.generateReviewIndex();
@@ -103,7 +103,6 @@ export default class SmartReviewPlugin extends Plugin {
       window.clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
     }
-    this.app.workspace.detachLeavesOfType(REVIEW_CENTER_VIEW_TYPE);
   }
 
   async loadSettings(): Promise<void> {
@@ -131,7 +130,7 @@ export default class SmartReviewPlugin extends Plugin {
     }
 
     await leaf.setViewState({ type: REVIEW_CENTER_VIEW_TYPE, active: true });
-    this.app.workspace.revealLeaf(leaf);
+    await this.app.workspace.revealLeaf(leaf);
     if (this.currentIndex === null) {
       await this.loadReviewIndexSnapshot();
     }

@@ -157,7 +157,7 @@ function collectVaultMetadataStats(app: App, settings: SmartReviewSettings): Vau
 
   for (const file of app.vault.getMarkdownFiles()) {
     const cache = app.metadataCache.getFileCache(file);
-    const frontmatter = (cache?.frontmatter ?? {}) as Frontmatter;
+    const frontmatter: Frontmatter = cache?.frontmatter ?? {};
     if (!shouldIncludeMetadataFile(file, frontmatter, settings)) {
       continue;
     }

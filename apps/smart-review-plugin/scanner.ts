@@ -44,7 +44,7 @@ function createReviewItem(app: App, settings: SmartReviewSettings, file: TFile, 
   }
 
   const cache = app.metadataCache.getFileCache(file);
-  const frontmatter = (cache?.frontmatter ?? {}) as Frontmatter;
+  const frontmatter: Frontmatter = cache?.frontmatter ?? {};
   const status = getOptionalString(frontmatter.status);
 
   if (settings.ignoreInactive && !isAllowedStatus(status, parseFilterList(settings.allowedStatuses))) {

@@ -61,7 +61,9 @@ export class SmartReviewSettingTab extends PluginSettingTab {
     const locale = resolveSmartReviewLocale(this.plugin.settings.language);
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Smart Review" });
+    new Setting(containerEl)
+      .setName("Review behavior")
+      .setHeading();
     containerEl.createEl("p", {
       text: t(locale, "settingsIntro"),
       cls: "smart-review-setting-note"

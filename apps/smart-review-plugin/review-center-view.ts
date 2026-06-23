@@ -51,7 +51,7 @@ export class ReviewCenterView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Smart Review Center";
+    return "Smart review center";
   }
 
   override getIcon(): string {
@@ -296,7 +296,7 @@ export class ReviewCenterView extends ItemView {
       cell.setAttr("type", "button");
       cell.setAttr("title", `${day.date}: ${day.count} ${unit}`);
       cell.setAttr("aria-label", `${day.date}: ${day.count} ${unit}. ${t(this.plugin.locale, "heatmapClickHint")}`);
-      cell.setAttr("data-tooltip", `${day.date}\A${day.count} ${unit}\A${t(this.plugin.locale, "heatmapClickHint")}`);
+      cell.setAttr("data-tooltip", `${day.date}\n${day.count} ${unit}\n${t(this.plugin.locale, "heatmapClickHint")}`);
       cell.onclick = () => {
         this.selectedHeatmap = selected ? null : { kind, date: day.date };
         this.heatmapExpanded = false;

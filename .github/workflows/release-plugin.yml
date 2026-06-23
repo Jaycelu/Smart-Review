@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  attestations: write
+  id-token: write
 
 jobs:
   release:
@@ -43,6 +45,14 @@ jobs:
 
       - name: Build release assets
         run: pnpm run release:plugin
+
+      - name: Attest release assets
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/plugin/main.js
+            dist/plugin/manifest.json
+            dist/plugin/styles.css
 
       - name: Create GitHub release
         env:
