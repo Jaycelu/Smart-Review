@@ -3,7 +3,7 @@ import { getLocalDateString, normalizeDate, type ReviewIndex, type ReviewItem, t
 import type { SmartReviewSettings } from "./settings";
 import { DEFAULT_SETTINGS } from "./settings";
 import { buildHeatmapDays, getDateDaysAgo, incrementDateCount } from "./heatmap";
-import { UNCATEGORIZED_DOMAIN, type DistributionItem, type ReviewHistoryDetail, type SmartReviewAnalytics } from "./analytics-types";
+import { UNCATEGORIZED_DOMAIN, type DistributionItem, type NoteCreationDetail, type ReviewHistoryDetail, type SmartReviewAnalytics } from "./analytics-types";
 import {
   collectTags,
   getOptionalString,
@@ -28,6 +28,7 @@ interface VaultMetadataStats {
   notesWithNextReview: number;
   metadataCompleteness: number;
   creationCountsByDate: Map<string, number>;
+  creationDetails: NoteCreationDetail[];
 }
 
 const RATING_NAMES: ReviewRating[] = ["again", "hard", "good", "easy"];
@@ -95,7 +96,8 @@ export async function buildSmartReviewAnalytics(
       byState: buildDistribution(index.items.map((item) => item.review_state))
     },
     details: {
-      reviewHistory: history.map(toReviewHistoryDetail)
+      reviewHistory: history.map(toReviewHistoryDetail),
+      noteCreation: vaultStats.creationDetails
     }
   };
 }
@@ -148,6 +150,7 @@ function parseReviewHistoryLine(line: string): ReviewHistoryRecord[] {
 
 function collectVaultMetadataStats(app: App, settings: SmartReviewSettings): VaultMetadataStats {
   const creationCountsByDate = new Map<string, number>();
+  const creationDetails: NoteCreationDetail[] = [];
   let activeNotes = 0;
   let notesWithNextReview = 0;
   let completenessTotal = 0;
@@ -165,14 +168,21 @@ function collectVaultMetadataStats(app: App, settings: SmartReviewSettings): Vau
     }
 
     completenessTotal += calculateMetadataCompleteness(frontmatter, file, cache);
-    incrementDateCount(creationCountsByDate, getCreationDate(frontmatter, file));
+    const creationDate = getCreationDate(frontmatter, file);
+    incrementDateCount(creationCountsByDate, creationDate);
+    creationDetails.push({
+      date: creationDate,
+      file: file.path,
+      title: getOptionalString(frontmatter.title) ?? file.basename
+    });
   }
 
   return {
     activeNotes,
     notesWithNextReview,
     metadataCompleteness: activeNotes > 0 ? completenessTotal / activeNotes : 1,
-    creationCountsByDate
+    creationCountsByDate,
+    creationDetails
   };
 }
 

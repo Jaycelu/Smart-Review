@@ -409,20 +409,21 @@
 }
 
 .smart-review-heatmap-viewport {
-  --smart-review-heatmap-cell: clamp(10px, calc((100vw - 520px) / 68), 18px);
-  --smart-review-heatmap-gap: 4px;
+  --smart-review-heatmap-gap: clamp(2px, 0.22vw, 4px);
+  --smart-review-heatmap-row: clamp(8px, 0.72vw, 14px);
   width: 100%;
   max-width: 100%;
-  overflow-x: auto;
+  overflow: visible;
   padding-bottom: 2px;
 }
 
 .smart-review-heatmap-months,
 .smart-review-heatmap {
   display: grid;
-  grid-template-columns: repeat(53, minmax(var(--smart-review-heatmap-cell), 1fr));
+  grid-template-columns: repeat(53, minmax(0, 1fr));
   gap: var(--smart-review-heatmap-gap);
-  min-width: calc(53 * 10px + 52 * var(--smart-review-heatmap-gap));
+  width: 100%;
+  min-width: 0;
 }
 
 .smart-review-heatmap-months {
@@ -437,33 +438,111 @@
 }
 
 .smart-review-heatmap {
-  grid-template-rows: repeat(7, var(--smart-review-heatmap-cell));
+  grid-template-rows: repeat(7, var(--smart-review-heatmap-row));
 }
 
 .smart-review-heatmap-cell {
+  position: relative;
+  display: block;
   width: 100%;
   height: 100%;
-  min-width: 10px;
-  min-height: 10px;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0;
+  padding: 0 !important;
   border: 1px solid var(--background-modifier-border);
   border-radius: 3px;
-  background: var(--background-secondary);
+  background-color: var(--background-secondary) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  color: transparent;
+  cursor: pointer;
+  appearance: none;
+  line-height: 0;
+  font-size: 0;
+  overflow: visible;
+}
+
+.smart-review-heatmap-cell:hover,
+.smart-review-heatmap-cell:focus-visible,
+.smart-review-heatmap-cell-selected {
+  border-color: var(--interactive-accent);
+  outline: none;
+}
+
+.smart-review-heatmap-cell:focus-visible,
+.smart-review-heatmap-cell-selected {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 24%, transparent);
+}
+
+.smart-review-heatmap-cell::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 20;
+  display: block;
+  min-width: 118px;
+  padding: 6px 8px;
+  border: 1px solid var(--smart-review-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  box-shadow: var(--shadow-s);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.35;
+  text-align: left;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -2px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  white-space: pre-line;
+}
+
+.smart-review-heatmap-cell::before {
+  content: "";
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  z-index: 21;
+  width: 8px;
+  height: 8px;
+  border-left: 1px solid var(--smart-review-border);
+  border-top: 1px solid var(--smart-review-border);
+  background: var(--background-primary);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 0) rotate(45deg);
+  transition: opacity 120ms ease;
+}
+
+.smart-review-heatmap-cell:hover::after,
+.smart-review-heatmap-cell:focus-visible::after,
+.smart-review-heatmap-cell:hover::before,
+.smart-review-heatmap-cell:focus-visible::before {
+  opacity: 1;
+}
+
+.smart-review-heatmap-cell:hover::after,
+.smart-review-heatmap-cell:focus-visible::after {
+  transform: translate(-50%, 0);
 }
 
 .smart-review-heatmap-level-1 {
-  background: color-mix(in srgb, var(--interactive-accent) 20%, var(--smart-review-card-bg));
+  background-color: color-mix(in srgb, var(--interactive-accent) 20%, var(--smart-review-card-bg)) !important;
 }
 
 .smart-review-heatmap-level-2 {
-  background: color-mix(in srgb, var(--interactive-accent) 38%, var(--smart-review-card-bg));
+  background-color: color-mix(in srgb, var(--interactive-accent) 38%, var(--smart-review-card-bg)) !important;
 }
 
 .smart-review-heatmap-level-3 {
-  background: color-mix(in srgb, var(--interactive-accent) 58%, var(--smart-review-card-bg));
+  background-color: color-mix(in srgb, var(--interactive-accent) 58%, var(--smart-review-card-bg)) !important;
 }
 
 .smart-review-heatmap-level-4 {
-  background: color-mix(in srgb, var(--interactive-accent) 78%, var(--smart-review-card-bg));
+  background-color: color-mix(in srgb, var(--interactive-accent) 78%, var(--smart-review-card-bg)) !important;
 }
 
 .smart-review-distributions-grid {

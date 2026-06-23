@@ -34,6 +34,7 @@ export interface SmartReviewAnalytics {
   };
   details: {
     reviewHistory: ReviewHistoryDetail[];
+    noteCreation: NoteCreationDetail[];
   };
 }
 
@@ -55,6 +56,12 @@ export interface ReviewHistoryDetail {
   title: string;
   rating: string;
   nextReview: string | null;
+}
+
+export interface NoteCreationDetail {
+  date: string;
+  file: string;
+  title: string;
 }
 
 export type ReviewStateDistributionName = ReviewState | "unknown";

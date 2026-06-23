@@ -1,6 +1,6 @@
 import { ItemView, Notice, type WorkspaceLeaf } from "obsidian";
 import type { ReviewItem, ReviewRating, ReviewState } from "@smart-review/shared";
-import { UNCATEGORIZED_DOMAIN, type DistributionItem, type HeatmapDay, type ReviewHistoryDetail, type SmartReviewAnalytics } from "./analytics-types";
+import { UNCATEGORIZED_DOMAIN, type DistributionItem, type HeatmapDay, type NoteCreationDetail, type ReviewHistoryDetail, type SmartReviewAnalytics } from "./analytics-types";
 import { t, type SmartReviewLocale, type SmartReviewTranslationKey } from "./i18n";
 import type SmartReviewPlugin from "./main";
 import { REVIEW_RATINGS } from "./settings";
@@ -23,16 +23,24 @@ const PLAN_GROUPS: PlanGroup[] = [
 ];
 
 type DrilldownKind = "domain" | "tag" | "rating";
+type HeatmapKind = "review" | "creation";
 
 interface DrilldownSelection {
   kind: DrilldownKind;
   name: string;
 }
 
+interface HeatmapSelection {
+  kind: HeatmapKind;
+  date: string;
+}
+
 export class ReviewCenterView extends ItemView {
   private readonly expandedGroups = new Set<ReviewState>();
   private selectedDrilldown: DrilldownSelection | null = null;
   private drilldownExpanded = false;
+  private selectedHeatmap: HeatmapSelection | null = null;
+  private heatmapExpanded = false;
 
   constructor(leaf: WorkspaceLeaf, private readonly plugin: SmartReviewPlugin) {
     super(leaf);
@@ -90,8 +98,8 @@ export class ReviewCenterView extends ItemView {
 
     this.renderMetrics(container, analytics);
     this.renderTaskFlow(container, analytics);
-    this.renderHeatmapSection(container, t(this.plugin.locale, "reviewHeatmapTitle"), t(this.plugin.locale, "reviewHeatmapSubtitle"), analytics.heatmaps.reviewActivity, t(this.plugin.locale, "reviewUnit"));
-    this.renderHeatmapSection(container, t(this.plugin.locale, "creationHeatmapTitle"), t(this.plugin.locale, "creationHeatmapSubtitle"), analytics.heatmaps.noteCreation, t(this.plugin.locale, "creationUnit"));
+    this.renderHeatmapSection(container, t(this.plugin.locale, "reviewHeatmapTitle"), t(this.plugin.locale, "reviewHeatmapSubtitle"), analytics.heatmaps.reviewActivity, t(this.plugin.locale, "reviewUnit"), "review", analytics);
+    this.renderHeatmapSection(container, t(this.plugin.locale, "creationHeatmapTitle"), t(this.plugin.locale, "creationHeatmapSubtitle"), analytics.heatmaps.noteCreation, t(this.plugin.locale, "creationUnit"), "creation", analytics);
     this.renderDistributions(container, analytics);
   }
 
@@ -263,7 +271,7 @@ export class ReviewCenterView extends ItemView {
     this.renderProgress(row, analytics.taskFlow.completionRate);
   }
 
-  private renderHeatmapSection(container: HTMLElement, title: string, subtitle: string, days: HeatmapDay[], unit: string): void {
+  private renderHeatmapSection(container: HTMLElement, title: string, subtitle: string, days: HeatmapDay[], unit: string, kind: HeatmapKind, analytics: SmartReviewAnalytics): void {
     const section = container.createDiv({ cls: "smart-review-heatmap-section" });
     this.renderSectionHeading(section, title, subtitle);
 
@@ -280,10 +288,69 @@ export class ReviewCenterView extends ItemView {
 
     const heatmap = viewport.createDiv({ cls: "smart-review-heatmap" });
     for (const [index, day] of days.entries()) {
-      const cell = heatmap.createDiv({ cls: `smart-review-heatmap-cell smart-review-heatmap-level-${day.level}` });
+      const selected = this.selectedHeatmap?.kind === kind && this.selectedHeatmap.date === day.date;
+      const cell = heatmap.createEl("button", {
+        cls: `smart-review-heatmap-cell smart-review-heatmap-level-${day.level}${selected ? " smart-review-heatmap-cell-selected" : ""}`
+      });
       cell.setAttr("style", `grid-column: ${Math.floor(index / 7) + 1}; grid-row: ${(index % 7) + 1};`);
+      cell.setAttr("type", "button");
       cell.setAttr("title", `${day.date}: ${day.count} ${unit}`);
-      cell.setAttr("aria-label", `${day.date}: ${day.count} ${unit}`);
+      cell.setAttr("aria-label", `${day.date}: ${day.count} ${unit}. ${t(this.plugin.locale, "heatmapClickHint")}`);
+      cell.setAttr("data-tooltip", `${day.date}\A${day.count} ${unit}\A${t(this.plugin.locale, "heatmapClickHint")}`);
+      cell.onclick = () => {
+        this.selectedHeatmap = selected ? null : { kind, date: day.date };
+        this.heatmapExpanded = false;
+        this.render();
+        if (!selected) {
+          this.focusHeatmapDetailAfterRender();
+        }
+      };
+    }
+
+    this.renderHeatmapDrilldown(section, kind, analytics);
+  }
+
+  private renderHeatmapDrilldown(container: HTMLElement, kind: HeatmapKind, analytics: SmartReviewAnalytics): void {
+    if (this.selectedHeatmap === null || this.selectedHeatmap.kind !== kind) {
+      return;
+    }
+
+    const rows = getHeatmapRows(this.selectedHeatmap, analytics);
+    const panel = container.createDiv({ cls: "smart-review-drilldown-panel smart-review-heatmap-detail-panel" });
+    panel.setAttr("tabindex", "-1");
+    const header = panel.createDiv({ cls: "smart-review-drilldown-header" });
+    const title = header.createDiv({ cls: "smart-review-drilldown-title" });
+    title.createEl("h3", { text: getHeatmapDrilldownTitle(this.plugin.locale, this.selectedHeatmap) });
+    title.createSpan({ cls: "smart-review-subtle-badge", text: t(this.plugin.locale, "detailCount", { count: rows.length }) });
+
+    const actions = header.createDiv({ cls: "smart-review-drilldown-actions" });
+    if (rows.length > 10) {
+      const toggle = actions.createEl("button", {
+        cls: "smart-review-link-button",
+        text: this.heatmapExpanded ? t(this.plugin.locale, "collapse") : t(this.plugin.locale, "expandAll")
+      });
+      toggle.onclick = () => {
+        this.heatmapExpanded = !this.heatmapExpanded;
+        this.render();
+        this.focusHeatmapDetailAfterRender();
+      };
+    }
+
+    const close = actions.createEl("button", { cls: "smart-review-link-button", text: t(this.plugin.locale, "close") });
+    close.onclick = () => {
+      this.selectedHeatmap = null;
+      this.heatmapExpanded = false;
+      this.render();
+    };
+
+    if (rows.length === 0) {
+      panel.createDiv({ cls: "smart-review-empty-state smart-review-empty-inline", text: t(this.plugin.locale, "noDetailRecords") });
+      return;
+    }
+
+    const list = panel.createDiv({ cls: "smart-review-drilldown-list" });
+    for (const row of this.heatmapExpanded ? rows : rows.slice(0, 10)) {
+      this.renderDrilldownRow(list, row);
     }
   }
 
@@ -371,7 +438,7 @@ export class ReviewCenterView extends ItemView {
     }
   }
 
-  private renderDrilldownRow(container: HTMLElement, row: ReviewItem | ReviewHistoryDetail): void {
+  private renderDrilldownRow(container: HTMLElement, row: ReviewItem | ReviewHistoryDetail | NoteCreationDetail): void {
     const item = container.createDiv({ cls: "smart-review-drilldown-row" });
     const main = item.createDiv({ cls: "smart-review-drilldown-main" });
     const title = main.createEl("button", { text: row.title, cls: "smart-review-task-title" });
@@ -395,10 +462,12 @@ export class ReviewCenterView extends ItemView {
       renderMeta(meta, t(this.plugin.locale, "statusLabel"), stateLabel(this.plugin.locale, row));
       renderMeta(meta, "next_review", row.next_review ?? t(this.plugin.locale, "invalid"));
       renderMeta(meta, "domain", row.domain);
-    } else {
+    } else if ("reviewedAt" in row) {
       renderMeta(meta, t(this.plugin.locale, "reviewedAt"), row.reviewedAt);
       renderMeta(meta, t(this.plugin.locale, "rating"), row.rating);
       renderMeta(meta, "next_review", row.nextReview ?? t(this.plugin.locale, "noRecord"));
+    } else {
+      renderMeta(meta, t(this.plugin.locale, "createdAt"), row.date);
     }
   }
 
@@ -406,6 +475,23 @@ export class ReviewCenterView extends ItemView {
     window.setTimeout(() => {
       const container = this.containerEl.children[1] as HTMLElement;
       const panel = container.querySelector<HTMLElement>(".smart-review-drilldown-panel");
+      if (panel === null) {
+        return;
+      }
+
+      panel.addClass("smart-review-drilldown-panel-focus");
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      panel.focus({ preventScroll: true });
+      window.setTimeout(() => {
+        panel.removeClass("smart-review-drilldown-panel-focus");
+      }, 1_200);
+    }, 0);
+  }
+
+  private focusHeatmapDetailAfterRender(): void {
+    window.setTimeout(() => {
+      const container = this.containerEl.children[1] as HTMLElement;
+      const panel = container.querySelector<HTMLElement>(".smart-review-heatmap-detail-panel");
       if (panel === null) {
         return;
       }
@@ -541,6 +627,26 @@ function getDrilldownRows(
   return history
     .filter((entry) => entry.rating === selection.name)
     .sort((left, right) => right.reviewedAt.localeCompare(left.reviewedAt));
+}
+
+function getHeatmapRows(selection: HeatmapSelection, analytics: SmartReviewAnalytics): Array<ReviewHistoryDetail | NoteCreationDetail> {
+  if (selection.kind === "review") {
+    return analytics.details.reviewHistory
+      .filter((entry) => entry.reviewedAt === selection.date)
+      .sort((left, right) => left.title.localeCompare(right.title));
+  }
+
+  return analytics.details.noteCreation
+    .filter((entry) => entry.date === selection.date)
+    .sort((left, right) => left.title.localeCompare(right.title));
+}
+
+function getHeatmapDrilldownTitle(locale: SmartReviewLocale, selection: HeatmapSelection): string {
+  if (selection.kind === "review") {
+    return t(locale, "reviewDayDetail", { date: selection.date });
+  }
+
+  return t(locale, "creationDayDetail", { date: selection.date });
 }
 
 function getDistributionDisplayName(locale: SmartReviewLocale, name: string): string {
