@@ -60,7 +60,7 @@ Smart Review Center 是插件内置的单一主页面，不需要额外安装 Ma
 
 升级后的默认行为与 0.2.2 完全一致，不会改变已有笔记的 frontmatter 结构。评分按钮会结合当前笔记的 `review_interval_days`、`review_ease` 和上述设置，显示本次点击后实际采用的间隔。
 
-## 0.2.3 更新内容
+## 0.2.4 更新内容
 
 - 新增四档动态复习间隔规则配置。
 - 评分按钮新增每篇笔记的实际间隔预览。
@@ -197,9 +197,9 @@ manifest.json
 styles.css
 ```
 
-Release tag 必须和 `manifest.json` 中的 `version` 完全一致，例如 `0.2.3`。不要加 `v` 前缀。
+Release tag 必须和 `manifest.json` 中的 `version` 完全一致，例如 `0.2.4`。不要加 `v` 前缀。
 
-推送 `0.2.3` 这类 tag 会自动触发 GitHub Actions 发版；如果 tag 和 `manifest.json.version` 不一致，workflow 会直接失败。
+推送 `0.2.4` 这类 tag 会自动触发 GitHub Actions 发版；如果 tag 和 `manifest.json.version` 不一致，workflow 会直接失败。
 
 ## 用户如何更新插件
 

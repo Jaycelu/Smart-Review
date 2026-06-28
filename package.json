@@ -1,6 +1,6 @@
 {
   "name": "smart-review",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
   "description": "Smart Review plugin workspace.",
   "type": "module",
@@ -15,7 +15,7 @@
     "release:plugin": "pnpm run sync:plugin-release && pnpm run build:plugin && node scripts/prepare-plugin-release.js",
     "sync:plugin-release": "node scripts/sync-plugin-release.js",
     "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm --filter @smart-review/shared build && pnpm -r typecheck"
   },
   "packageManager": "pnpm@9.15.0",
   "devDependencies": {

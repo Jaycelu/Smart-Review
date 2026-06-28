@@ -60,7 +60,7 @@ Open `Settings -> Smart Review` to tune the adaptive scheduling rules:
 
 Existing users keep the same scheduling behavior after upgrading. The buttons show the interval calculated from the selected rules and each note's current `review_interval_days` and `review_ease` values.
 
-## What's New in 0.2.3
+## What's New in 0.2.4
 
 - Added configurable adaptive interval rules for all four review ratings.
 - Added per-note interval previews to the review feedback buttons.
@@ -117,7 +117,7 @@ The script copies the plugin files to:
 
 ## GitHub Release Assets
 
-For an Obsidian community release, create a GitHub release whose tag exactly matches the version in `manifest.json`, for example `0.2.3`.
+For an Obsidian community release, create a GitHub release whose tag exactly matches the version in `manifest.json`, for example `0.2.4`.
 
 Prepare release assets:
 
@@ -135,7 +135,7 @@ The release tag should not use a `v` prefix.
 
 Before bumping a release, update the root `manifest.json` version. Then run `pnpm run sync:plugin-release` to keep the plugin manifest, package versions, and both `versions.json` files aligned.
 
-Pushing a tag such as `0.2.3` runs the release workflow automatically. The workflow fails if the tag does not match `manifest.json.version`.
+Pushing a tag such as `0.2.4` runs the release workflow automatically. The workflow fails if the tag does not match `manifest.json.version`.
 
 ## Updating the Installed Plugin
 
