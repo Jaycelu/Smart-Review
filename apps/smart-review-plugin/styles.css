@@ -333,6 +333,7 @@
   font-size: var(--font-ui-smaller);
   font-weight: 650;
   text-align: center;
+  white-space: nowrap;
 }
 
 .smart-review-rating-again {

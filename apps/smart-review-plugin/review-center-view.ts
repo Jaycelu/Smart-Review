@@ -230,9 +230,12 @@ export class ReviewCenterView extends ItemView {
 
     const feedback = task.createDiv({ cls: "smart-review-rating-actions" });
     for (const rating of REVIEW_RATINGS) {
+      const intervalDays = this.plugin.getReviewIntervalDays(item.file, rating);
       const button = feedback.createEl("button", {
         cls: `smart-review-rating smart-review-rating-${rating}`,
-        text: ratingText(rating)
+        text: intervalDays === null
+          ? ratingText(rating)
+          : t(this.plugin.locale, "ratingInterval", { rating: ratingText(rating), days: intervalDays })
       });
       button.setAttr("title", ratingTooltip(this.plugin.locale, rating));
       button.onclick = async () => {

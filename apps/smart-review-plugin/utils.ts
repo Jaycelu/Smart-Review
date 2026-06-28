@@ -5,6 +5,10 @@ import { DEFAULT_SETTINGS } from "./settings";
 
 export type Frontmatter = Record<string, unknown>;
 
+export function toFrontmatter(value: unknown): Frontmatter {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Frontmatter) : {};
+}
+
 export function getOptionalString(value: unknown): string | undefined {
   if (typeof value === "string") {
     const trimmed = value.trim();

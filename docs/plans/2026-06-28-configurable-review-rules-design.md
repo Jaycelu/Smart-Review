@@ -24,7 +24,7 @@ The shared scheduling function receives the configurable rule values. Its output
 - Good: base interval multiplied by current ease and the configured Good multiplier.
 - Easy: base interval multiplied by current ease and the configured Easy multiplier; increase ease.
 
-All interval results are rounded to whole days and remain at least one day.
+All interval results are rounded to whole days. Hard keeps its existing two-day minimum; the other outcomes remain at least one day.
 
 ## Review Center
 

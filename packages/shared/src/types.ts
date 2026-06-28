@@ -37,6 +37,14 @@ export interface SpacedReviewInput {
   currentIntervalDays?: number | null;
   currentEase?: number | null;
   defaultIntervalDays?: number;
+  intervalRules?: Partial<ReviewIntervalRules>;
+}
+
+export interface ReviewIntervalRules {
+  againIntervalDays: number;
+  hardMultiplier: number;
+  goodMultiplier: number;
+  easyMultiplier: number;
 }
 
 export interface SpacedReviewResult {

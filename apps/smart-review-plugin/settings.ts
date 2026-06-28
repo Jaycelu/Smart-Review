@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type SmartReviewPlugin from "./main";
-import type { ReviewRating } from "@smart-review/shared";
+import { DEFAULT_REVIEW_INTERVAL_RULES, type ReviewIntervalRules, type ReviewRating } from "@smart-review/shared";
 import { resolveSmartReviewLocale, t, type SmartReviewLanguageSetting } from "./i18n";
 
 export interface SmartReviewSettings {
@@ -16,6 +16,10 @@ export interface SmartReviewSettings {
   domainFilter: string;
   tagFilter: string;
   reviewIntervalDays: number;
+  reviewAgainIntervalDays: number;
+  reviewHardMultiplier: number;
+  reviewGoodMultiplier: number;
+  reviewEasyMultiplier: number;
   reviewHistoryPath: string;
   enableReviewHistory: boolean;
   dailyMarkdownPath: string;
@@ -39,6 +43,10 @@ export const DEFAULT_SETTINGS: SmartReviewSettings = {
   domainFilter: "",
   tagFilter: "",
   reviewIntervalDays: 30,
+  reviewAgainIntervalDays: DEFAULT_REVIEW_INTERVAL_RULES.againIntervalDays,
+  reviewHardMultiplier: DEFAULT_REVIEW_INTERVAL_RULES.hardMultiplier,
+  reviewGoodMultiplier: DEFAULT_REVIEW_INTERVAL_RULES.goodMultiplier,
+  reviewEasyMultiplier: DEFAULT_REVIEW_INTERVAL_RULES.easyMultiplier,
   reviewHistoryPath: "review-history.jsonl",
   enableReviewHistory: true,
   dailyMarkdownPath: "00-总览/今日复习.md",
@@ -306,6 +314,42 @@ export class SmartReviewSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName(t(locale, "againIntervalDays"))
+      .setDesc(t(locale, "againIntervalDaysDesc"))
+      .addText((text) => {
+        text.inputEl.type = "number";
+        text.inputEl.min = "1";
+        text.inputEl.step = "1";
+        text
+          .setPlaceholder(String(DEFAULT_SETTINGS.reviewAgainIntervalDays))
+          .setValue(String(this.plugin.settings.reviewAgainIntervalDays))
+          .onChange(async (value) => {
+            this.plugin.settings.reviewAgainIntervalDays = parsePositiveInteger(value, DEFAULT_SETTINGS.reviewAgainIntervalDays);
+            await this.plugin.saveSettings();
+            this.plugin.renderReviewCenter();
+          });
+      });
+
+    this.addMultiplierSetting(
+      containerEl,
+      t(locale, "hardMultiplier"),
+      t(locale, "hardMultiplierDesc"),
+      "reviewHardMultiplier"
+    );
+    this.addMultiplierSetting(
+      containerEl,
+      t(locale, "goodMultiplier"),
+      t(locale, "goodMultiplierDesc"),
+      "reviewGoodMultiplier"
+    );
+    this.addMultiplierSetting(
+      containerEl,
+      t(locale, "easyMultiplier"),
+      t(locale, "easyMultiplierDesc"),
+      "reviewEasyMultiplier"
+    );
+
+    new Setting(containerEl)
       .setName(t(locale, "scanStartup"))
       .setDesc(t(locale, "scanStartupDesc"))
       .addToggle((toggle) =>
@@ -326,6 +370,30 @@ export class SmartReviewSettingTab extends PluginSettingTab {
         })
       );
   }
+
+  private addMultiplierSetting(
+    containerEl: HTMLElement,
+    name: string,
+    description: string,
+    key: "reviewHardMultiplier" | "reviewGoodMultiplier" | "reviewEasyMultiplier"
+  ): void {
+    new Setting(containerEl)
+      .setName(name)
+      .setDesc(description)
+      .addText((text) => {
+        text.inputEl.type = "number";
+        text.inputEl.min = "0.1";
+        text.inputEl.step = "0.1";
+        text
+          .setPlaceholder(String(DEFAULT_SETTINGS[key]))
+          .setValue(String(this.plugin.settings[key]))
+          .onChange(async (value) => {
+            this.plugin.settings[key] = parsePositiveNumber(value, DEFAULT_SETTINGS[key]);
+            await this.plugin.saveSettings();
+            this.plugin.renderReviewCenter();
+          });
+      });
+  }
 }
 
 function isSmartReviewLanguageSetting(value: string): value is SmartReviewLanguageSetting {
@@ -333,10 +401,24 @@ function isSmartReviewLanguageSetting(value: string): value is SmartReviewLangua
 }
 
 export function parseReviewIntervalDays(value: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1) {
-    return DEFAULT_SETTINGS.reviewIntervalDays;
-  }
+  return Math.min(parsePositiveInteger(value, DEFAULT_SETTINGS.reviewIntervalDays), 3650);
+}
 
-  return Math.min(parsed, 3650);
+export function getReviewIntervalRules(settings: SmartReviewSettings): ReviewIntervalRules {
+  return {
+    againIntervalDays: settings.reviewAgainIntervalDays,
+    hardMultiplier: settings.reviewHardMultiplier,
+    goodMultiplier: settings.reviewGoodMultiplier,
+    easyMultiplier: settings.reviewEasyMultiplier
+  };
+}
+
+function parsePositiveInteger(value: string, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parsePositiveNumber(value: string, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }

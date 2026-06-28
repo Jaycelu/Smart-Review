@@ -1,9 +1,16 @@
-import type { ReviewItem, ReviewRating, ReviewState, ReviewSummary, SpacedReviewInput, SpacedReviewResult } from "./types";
+import type { ReviewIntervalRules, ReviewItem, ReviewState, ReviewSummary, SpacedReviewInput, SpacedReviewResult } from "./types";
 
 const DEFAULT_EASE = 2.5;
 const MIN_EASE = 1.3;
 const MAX_EASE = 3;
 const DEFAULT_INTERVAL_DAYS = 30;
+
+export const DEFAULT_REVIEW_INTERVAL_RULES: ReviewIntervalRules = {
+  againIntervalDays: 1,
+  hardMultiplier: 1.2,
+  goodMultiplier: 1,
+  easyMultiplier: 1.3
+};
 
 export function getReviewState(daysDelta: number | null): ReviewState {
   if (daysDelta === null) {
@@ -51,11 +58,12 @@ export function calculateSpacedReview(input: SpacedReviewInput): SpacedReviewRes
   const currentIntervalDays = normalizePositiveInteger(input.currentIntervalDays, 0);
   const defaultIntervalDays = normalizePositiveInteger(input.defaultIntervalDays, DEFAULT_INTERVAL_DAYS);
   const currentEase = clampEase(input.currentEase);
+  const rules = normalizeIntervalRules(input.intervalRules);
 
   if (input.rating === "again") {
     return {
       rating: input.rating,
-      intervalDays: 1,
+      intervalDays: rules.againIntervalDays,
       ease: roundEase(currentEase - 0.2),
       lapseDelta: 1
     };
@@ -64,7 +72,7 @@ export function calculateSpacedReview(input: SpacedReviewInput): SpacedReviewRes
   if (input.rating === "hard") {
     return {
       rating: input.rating,
-      intervalDays: Math.max(2, Math.round(getBaseInterval(currentIntervalDays, defaultIntervalDays) * 1.2)),
+      intervalDays: Math.max(2, Math.round(getBaseInterval(currentIntervalDays, defaultIntervalDays) * rules.hardMultiplier)),
       ease: roundEase(currentEase - 0.05),
       lapseDelta: 0
     };
@@ -73,7 +81,7 @@ export function calculateSpacedReview(input: SpacedReviewInput): SpacedReviewRes
   if (input.rating === "easy") {
     return {
       rating: input.rating,
-      intervalDays: Math.max(defaultIntervalDays, Math.round(getBaseInterval(currentIntervalDays, defaultIntervalDays) * currentEase * 1.3)),
+      intervalDays: Math.max(defaultIntervalDays, Math.round(getBaseInterval(currentIntervalDays, defaultIntervalDays) * currentEase * rules.easyMultiplier)),
       ease: roundEase(currentEase + 0.15),
       lapseDelta: 0
     };
@@ -81,9 +89,18 @@ export function calculateSpacedReview(input: SpacedReviewInput): SpacedReviewRes
 
   return {
     rating: input.rating,
-    intervalDays: Math.max(defaultIntervalDays, Math.round(getBaseInterval(currentIntervalDays, defaultIntervalDays) * currentEase)),
+    intervalDays: Math.max(defaultIntervalDays, Math.round(getBaseInterval(currentIntervalDays, defaultIntervalDays) * currentEase * rules.goodMultiplier)),
     ease: roundEase(currentEase),
     lapseDelta: 0
+  };
+}
+
+function normalizeIntervalRules(rules: Partial<ReviewIntervalRules> | undefined): ReviewIntervalRules {
+  return {
+    againIntervalDays: normalizePositiveInteger(rules?.againIntervalDays, DEFAULT_REVIEW_INTERVAL_RULES.againIntervalDays),
+    hardMultiplier: normalizePositiveNumber(rules?.hardMultiplier, DEFAULT_REVIEW_INTERVAL_RULES.hardMultiplier),
+    goodMultiplier: normalizePositiveNumber(rules?.goodMultiplier, DEFAULT_REVIEW_INTERVAL_RULES.goodMultiplier),
+    easyMultiplier: normalizePositiveNumber(rules?.easyMultiplier, DEFAULT_REVIEW_INTERVAL_RULES.easyMultiplier)
   };
 }
 
@@ -93,6 +110,10 @@ function getBaseInterval(currentIntervalDays: number, defaultIntervalDays: numbe
 
 function normalizePositiveInteger(value: number | null | undefined, fallback: number): number {
   return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+function normalizePositiveNumber(value: number | null | undefined, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
 function clampEase(value: number | null | undefined): number {

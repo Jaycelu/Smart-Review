@@ -1,6 +1,7 @@
 export type {
   ReviewIndex,
   ReviewItem,
+  ReviewIntervalRules,
   ReviewRating,
   ReviewState,
   ReviewSummary,
@@ -8,4 +9,4 @@ export type {
   SpacedReviewResult
 } from "./types";
 export { calculateDaysDelta, calculateNextReviewDate, getLocalDateString, normalizeDate } from "./date";
-export { calculateSpacedReview, createEmptySummary, getReviewState, summarizeReviewItems } from "./review";
+export { calculateSpacedReview, createEmptySummary, DEFAULT_REVIEW_INTERVAL_RULES, getReviewState, summarizeReviewItems } from "./review";

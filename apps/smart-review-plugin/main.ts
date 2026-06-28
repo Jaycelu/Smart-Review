@@ -5,12 +5,12 @@ import { buildSmartReviewAnalytics } from "./analytics-service";
 import type { SmartReviewAnalytics } from "./analytics-types";
 import { resolveSmartReviewLocale, t, type SmartReviewLocale } from "./i18n";
 import { buildDailyReviewMarkdown } from "./markdown-export";
-import { markFileReviewed } from "./review-actions";
+import { calculateReviewResult, markFileReviewed } from "./review-actions";
 import { ReviewCenterView, REVIEW_CENTER_VIEW_TYPE } from "./review-center-view";
 import { buildReviewIndex } from "./scanner";
 import { DEFAULT_SETTINGS, REVIEW_RATINGS, SmartReviewSettingTab, type SmartReviewSettings } from "./settings";
 import { SmartReviewStatusBar } from "./status-bar";
-import { ensureParentFolder, isMissingFileError, normalizeOutputPath } from "./utils";
+import { ensureParentFolder, isMissingFileError, normalizeOutputPath, toFrontmatter } from "./utils";
 
 export default class SmartReviewPlugin extends Plugin {
   settings: SmartReviewSettings = DEFAULT_SETTINGS;
@@ -210,6 +210,16 @@ export default class SmartReviewPlugin extends Plugin {
     }
 
     await this.reviewFile(file, rating);
+  }
+
+  getReviewIntervalDays(filePath: string, rating: ReviewRating): number | null {
+    const file = this.app.vault.getFileByPath(filePath);
+    if (file === null) {
+      return null;
+    }
+
+    const frontmatter = toFrontmatter(this.app.metadataCache.getFileCache(file)?.frontmatter);
+    return calculateReviewResult(this.settings, frontmatter, rating).intervalDays;
   }
 
   async generateDailyReviewMarkdown(): Promise<void> {

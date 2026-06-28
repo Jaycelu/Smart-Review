@@ -70,6 +70,34 @@ test("calculateSpacedReview uses defaults for new notes", () => {
   );
 });
 
+test("calculateSpacedReview applies configurable rating rules", () => {
+  const intervalRules = {
+    againIntervalDays: 2,
+    hardMultiplier: 1.5,
+    goodMultiplier: 0.8,
+    easyMultiplier: 1.6
+  };
+
+  assert.equal(calculateSpacedReview({ rating: "again", currentIntervalDays: 30, intervalRules }).intervalDays, 2);
+  assert.equal(calculateSpacedReview({ rating: "hard", currentIntervalDays: 30, intervalRules }).intervalDays, 45);
+  assert.equal(calculateSpacedReview({ rating: "good", currentIntervalDays: 30, currentEase: 2.5, intervalRules }).intervalDays, 60);
+  assert.equal(calculateSpacedReview({ rating: "easy", currentIntervalDays: 30, currentEase: 2.5, intervalRules }).intervalDays, 120);
+});
+
+test("calculateSpacedReview falls back for invalid configurable rules", () => {
+  const intervalRules = {
+    againIntervalDays: 0,
+    hardMultiplier: Number.NaN,
+    goodMultiplier: -1,
+    easyMultiplier: 0
+  };
+
+  assert.equal(calculateSpacedReview({ rating: "again", currentIntervalDays: 30, intervalRules }).intervalDays, 1);
+  assert.equal(calculateSpacedReview({ rating: "hard", currentIntervalDays: 30, intervalRules }).intervalDays, 36);
+  assert.equal(calculateSpacedReview({ rating: "good", currentIntervalDays: 30, currentEase: 2.5, intervalRules }).intervalDays, 75);
+  assert.equal(calculateSpacedReview({ rating: "easy", currentIntervalDays: 30, currentEase: 2.5, intervalRules }).intervalDays, 98);
+});
+
 function createItem(reviewState) {
   return {
     title: reviewState,

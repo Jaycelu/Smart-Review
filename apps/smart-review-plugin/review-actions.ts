@@ -4,9 +4,10 @@ import {
   calculateSpacedReview,
   getLocalDateString,
   normalizeDate,
-  type ReviewRating
+  type ReviewRating,
+  type SpacedReviewResult
 } from "@smart-review/shared";
-import type { SmartReviewSettings } from "./settings";
+import { getReviewIntervalRules, type SmartReviewSettings } from "./settings";
 import {
   ensureParentFolder,
   getNextReviewCount,
@@ -37,6 +38,20 @@ export interface ReviewActionResult {
   historyEntry: ReviewHistoryEntry;
 }
 
+export function calculateReviewResult(
+  settings: SmartReviewSettings,
+  frontmatter: Frontmatter,
+  rating: ReviewRating
+): SpacedReviewResult {
+  return calculateSpacedReview({
+    rating,
+    currentIntervalDays: getOptionalNumber(frontmatter.review_interval_days),
+    currentEase: getOptionalNumber(frontmatter.review_ease),
+    defaultIntervalDays: settings.reviewIntervalDays,
+    intervalRules: getReviewIntervalRules(settings)
+  });
+}
+
 export async function markFileReviewed(
   app: App,
   settings: SmartReviewSettings,
@@ -48,12 +63,7 @@ export async function markFileReviewed(
   let nextReview: string | null = null;
 
   await app.fileManager.processFrontMatter(file, (frontmatter: Frontmatter) => {
-    const reviewResult = calculateSpacedReview({
-      rating,
-      currentIntervalDays: getOptionalNumber(frontmatter.review_interval_days),
-      currentEase: getOptionalNumber(frontmatter.review_ease),
-      defaultIntervalDays: settings.reviewIntervalDays
-    });
+    const reviewResult = calculateReviewResult(settings, frontmatter, rating);
     nextReview = calculateNextReviewDate(reviewedAt, reviewResult.intervalDays);
     if (nextReview === null) {
       throw new Error("Invalid next review date.");
