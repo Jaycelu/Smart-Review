@@ -1,7 +1,7 @@
 {
   "id": "smart-review",
   "name": "Smart Review",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "minAppVersion": "1.8.7",
   "description": "Review center for Properties and YAML frontmatter with spaced feedback, history, and AI payload export.",
   "author": "Jayce",

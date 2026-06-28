@@ -442,20 +442,20 @@
   grid-template-rows: repeat(7, var(--smart-review-heatmap-row));
 }
 
-.smart-review-heatmap-cell {
+.smart-review-center .smart-review-heatmap-cell {
   position: relative;
   display: block;
   width: 100%;
   height: 100%;
-  min-width: 0 !important;
-  min-height: 0 !important;
+  min-width: 0;
+  min-height: 0;
   margin: 0;
-  padding: 0 !important;
+  padding: 0;
   border: 1px solid var(--background-modifier-border);
   border-radius: 3px;
-  background-color: var(--background-secondary) !important;
-  background-image: none !important;
-  box-shadow: none !important;
+  background-color: var(--background-secondary);
+  background-image: none;
+  box-shadow: none;
   color: transparent;
   cursor: pointer;
   appearance: none;
@@ -493,7 +493,6 @@
   font-size: var(--font-ui-smaller);
   line-height: 1.35;
   text-align: left;
-  white-space: nowrap;
   pointer-events: none;
   opacity: 0;
   transform: translate(-50%, -2px);
@@ -530,20 +529,20 @@
   transform: translate(-50%, 0);
 }
 
-.smart-review-heatmap-level-1 {
-  background-color: color-mix(in srgb, var(--interactive-accent) 20%, var(--smart-review-card-bg)) !important;
+.smart-review-center .smart-review-heatmap-cell.smart-review-heatmap-level-1 {
+  background-color: color-mix(in srgb, var(--interactive-accent) 20%, var(--smart-review-card-bg));
 }
 
-.smart-review-heatmap-level-2 {
-  background-color: color-mix(in srgb, var(--interactive-accent) 38%, var(--smart-review-card-bg)) !important;
+.smart-review-center .smart-review-heatmap-cell.smart-review-heatmap-level-2 {
+  background-color: color-mix(in srgb, var(--interactive-accent) 38%, var(--smart-review-card-bg));
 }
 
-.smart-review-heatmap-level-3 {
-  background-color: color-mix(in srgb, var(--interactive-accent) 58%, var(--smart-review-card-bg)) !important;
+.smart-review-center .smart-review-heatmap-cell.smart-review-heatmap-level-3 {
+  background-color: color-mix(in srgb, var(--interactive-accent) 58%, var(--smart-review-card-bg));
 }
 
-.smart-review-heatmap-level-4 {
-  background-color: color-mix(in srgb, var(--interactive-accent) 78%, var(--smart-review-card-bg)) !important;
+.smart-review-center .smart-review-heatmap-cell.smart-review-heatmap-level-4 {
+  background-color: color-mix(in srgb, var(--interactive-accent) 78%, var(--smart-review-card-bg));
 }
 
 .smart-review-distributions-grid {

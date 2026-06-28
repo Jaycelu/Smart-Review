@@ -22,6 +22,8 @@ The Obsidian plugin works on its own and does not require any external companion
 - Show overdue, today, next 7 days, future, and invalid-date notes in Review Center.
 - Display today and overdue counts in the Obsidian status bar.
 - Support `again`, `hard`, `good`, and `easy` review feedback.
+- Keep adaptive spaced-review scheduling while allowing users to tune the four rating rules.
+- Preview each note's calculated interval directly on the rating buttons.
 - Write review metadata back to note frontmatter.
 - Append review events to `review-history.jsonl`.
 - Generate a native Markdown daily review page.
@@ -36,6 +38,7 @@ It includes:
 - Today's review plan with overdue, today, and next 7 days groups.
 - Direct note opening from each review task.
 - `Again`, `Hard`, `Good`, and `Easy` feedback buttons.
+- Per-note interval previews such as `Again · 1d`, `Hard · 36d`, `Good · 75d`, and `Easy · 98d`.
 - Overview cards for today, overdue, completed this week, and vault health score.
 - Task Flow completion progress.
 - Review activity heatmap based on `review-history.jsonl`.
@@ -44,6 +47,24 @@ It includes:
 - Clickable distribution rows with in-page drill-down details and collapsible long lists.
 
 The health score is a lightweight operational indicator. It combines review coverage, overdue control, recent activity, metadata completeness, and AI card readiness. It is not an absolute measure of knowledge quality.
+
+## Review Interval Rules
+
+Open `Settings -> Smart Review` to tune the adaptive scheduling rules:
+
+- **Initial review interval days**: base interval for notes without review history. Default: `30`.
+- **Again interval days**: reset interval after a failed recall. Default: `1`.
+- **Hard interval multiplier**: multiplier applied to the current interval. Default: `1.2`.
+- **Good interval multiplier**: additional multiplier applied after the note's ease factor. Default: `1.0`.
+- **Easy interval multiplier**: additional multiplier applied after the note's ease factor. Default: `1.3`.
+
+Existing users keep the same scheduling behavior after upgrading. The buttons show the interval calculated from the selected rules and each note's current `review_interval_days` and `review_ease` values.
+
+## What's New in 0.2.3
+
+- Added configurable adaptive interval rules for all four review ratings.
+- Added per-note interval previews to the review feedback buttons.
+- Preserved the 0.2.2 scheduling defaults and existing frontmatter compatibility.
 
 ## Repository Structure
 
@@ -96,7 +117,7 @@ The script copies the plugin files to:
 
 ## GitHub Release Assets
 
-For an Obsidian community release, create a GitHub release whose tag exactly matches the version in `manifest.json`, for example `0.2.0`.
+For an Obsidian community release, create a GitHub release whose tag exactly matches the version in `manifest.json`, for example `0.2.3`.
 
 Prepare release assets:
 
@@ -114,7 +135,7 @@ The release tag should not use a `v` prefix.
 
 Before bumping a release, update the root `manifest.json` version. Then run `pnpm run sync:plugin-release` to keep the plugin manifest, package versions, and both `versions.json` files aligned.
 
-Pushing a tag such as `0.2.0` runs the release workflow automatically. The workflow fails if the tag does not match `manifest.json.version`.
+Pushing a tag such as `0.2.3` runs the release workflow automatically. The workflow fails if the tag does not match `manifest.json.version`.
 
 ## Updating the Installed Plugin
 

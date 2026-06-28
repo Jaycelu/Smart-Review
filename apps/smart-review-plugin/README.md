@@ -4,6 +4,17 @@ Smart Review 插件本体负责完整复习闭环：扫描 Properties / YAML fro
 
 UI 支持 English / 简体中文，默认跟随 Obsidian 应用语言，也可以在插件设置中手动切换。样式使用 Obsidian 官方主题变量，适配浅色和深色模式。
 
+## 动态复习间隔
+
+插件保留基于当前间隔和 `review_ease` 的动态算法，并允许在设置页调整：
+
+- `Again` 重置天数，默认 `1`
+- `Hard` 间隔倍率，默认 `1.2`
+- `Good` ease 附加倍率，默认 `1.0`
+- `Easy` ease 附加倍率，默认 `1.3`
+
+Review Center 的评分按钮会显示每篇笔记当前计算出的实际间隔。点击评分后，写入 `next_review` 的结果与按钮预览使用同一个共享计算函数。
+
 ## 构建
 
 ```bash

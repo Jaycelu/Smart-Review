@@ -22,6 +22,8 @@
 - 在插件内提供融合式 Smart Review Center
 - 状态栏显示今日复习和逾期数量，点击可打开 Smart Review Center
 - 支持 `again` / `hard` / `good` / `easy` 复习反馈
+- 保留动态间隔重复算法，同时允许用户调整四档复习规则
+- 在评分按钮上预览每篇笔记本次计算出的实际间隔
 - 自动写回下一次复习日期、复习评分、间隔、ease 和 lapses
 - 自动追加复习历史
 - 生成 Obsidian 原生今日复习 Markdown
@@ -36,6 +38,7 @@ Smart Review Center 是插件内置的单一主页面，不需要额外安装 Ma
 - 今日复习计划：按已逾期、今日复习、未来 7 天分组。
 - 任务跳转：点击标题直接打开对应 Obsidian 笔记。
 - 复习反馈：每条任务支持 `Again` / `Hard` / `Good` / `Easy`。
+- 间隔预览：按钮直接显示 `Again · 1天`、`Hard · 36天`、`Good · 75天`、`Easy · 98天` 等当前计算结果。
 - 数据总览：今日复习、逾期任务、本周完成和知识库健康分。
 - Task Flow：今日完成率进度条。
 - 复习活跃热力图：基于 `review-history.jsonl`。
@@ -44,6 +47,24 @@ Smart Review Center 是插件内置的单一主页面，不需要额外安装 Ma
 - 分布行可点击查看详情，长列表默认折叠，避免页面杂乱。
 
 健康分是辅助运营指标，综合复习覆盖率、逾期控制、最近复习活跃度、元数据完整度和 AI 卡片准备度；它不代表知识质量的绝对水平。
+
+## 动态复习间隔设置
+
+在 `设置 -> Smart Review` 中可以调整动态算法参数：
+
+- **初始复习间隔天数**：没有复习历史时使用的基础间隔，默认 `30`。
+- **Again 间隔天数**：遗忘后重置到的间隔，默认 `1`。
+- **Hard 间隔倍率**：乘以上一次复习间隔，默认 `1.2`。
+- **Good 间隔倍率**：在笔记 ease 系数之外追加的倍率，默认 `1.0`。
+- **Easy 间隔倍率**：在笔记 ease 系数之外追加的倍率，默认 `1.3`。
+
+升级后的默认行为与 0.2.2 完全一致，不会改变已有笔记的 frontmatter 结构。评分按钮会结合当前笔记的 `review_interval_days`、`review_ease` 和上述设置，显示本次点击后实际采用的间隔。
+
+## 0.2.3 更新内容
+
+- 新增四档动态复习间隔规则配置。
+- 评分按钮新增每篇笔记的实际间隔预览。
+- 保持 0.2.2 默认算法和已有 frontmatter 兼容。
 
 ## 项目结构
 
@@ -176,9 +197,9 @@ manifest.json
 styles.css
 ```
 
-Release tag 必须和 `manifest.json` 中的 `version` 完全一致，例如 `0.2.0`。不要加 `v` 前缀。
+Release tag 必须和 `manifest.json` 中的 `version` 完全一致，例如 `0.2.3`。不要加 `v` 前缀。
 
-推送 `0.2.0` 这类 tag 会自动触发 GitHub Actions 发版；如果 tag 和 `manifest.json.version` 不一致，workflow 会直接失败。
+推送 `0.2.3` 这类 tag 会自动触发 GitHub Actions 发版；如果 tag 和 `manifest.json.version` 不一致，workflow 会直接失败。
 
 ## 用户如何更新插件
 

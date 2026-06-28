@@ -43,6 +43,12 @@ jobs:
             exit 1
           fi
 
+      - name: Type check
+        run: pnpm run typecheck
+
+      - name: Run tests
+        run: pnpm test
+
       - name: Build release assets
         run: pnpm run release:plugin
 
