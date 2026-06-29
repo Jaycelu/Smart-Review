@@ -4,7 +4,7 @@
 
 [插件源码](apps/smart-review-plugin)
 
-基于 Obsidian Properties / YAML frontmatter 的智能复习系统，让笔记按照 `next_review` 自动进入复习队列，并支持复习完成、间隔重复、复习历史和 AI 复习卡片。
+基于 Obsidian Properties / YAML frontmatter 的智能复习系统，让笔记按照 `next_review` 自动进入复习队列，并支持动态复习、暂停与恢复，以及使用用户自备模型完成基于原文证据的 AI 掌握检验。
 
 当前主线是 Obsidian 插件本体独立可用。用户安装插件后，不需要额外安装 Mac App，也能在 Obsidian 内完成复习闭环。
 
@@ -28,6 +28,9 @@
 - 自动追加复习历史
 - 生成 Obsidian 原生今日复习 Markdown
 - 生成 AI 复习卡片 `prompt_payload`，不直接调用外部 AI API
+- 支持暂停 30 天、90 天、自定义日期或无限期暂停，并可直接恢复
+- 支持可选 AI 掌握检验、独立复核、置信度、参考答案和延迟复检
+- 支持 OpenAI-compatible、OpenAI、Anthropic、Gemini、Azure OpenAI 和 Ollama
 
 ## Smart Review Center
 
@@ -45,6 +48,10 @@ Smart Review Center 是插件内置的单一主页面，不需要额外安装 Ma
 - 笔记创建热力图：基于 `frontmatter.created`、文件创建时间或文件修改时间。
 - 领域、标签和复习评分分布。
 - 分布行可点击查看详情，长列表默认折叠，避免页面杂乱。
+- 已暂停、掌握复检、已掌握和建议检验均为独立折叠分组。
+- 页面根据 leaf 实际宽度自适应，窄侧栏不再出现文字竖排和按钮重叠。
+
+点击 Ribbon 图标会在主区域标签页打开 Review Center。旧用户 workspace 中若仍保留侧栏页面，本次主动打开会将其迁移到主区域；用户以后手动拖回侧栏仍然可以正常使用。
 
 健康分是辅助运营指标，综合复习覆盖率、逾期控制、最近复习活跃度、元数据完整度和 AI 卡片准备度；它不代表知识质量的绝对水平。
 
@@ -59,6 +66,35 @@ Smart Review Center 是插件内置的单一主页面，不需要额外安装 Ma
 - **Easy 间隔倍率**：在笔记 ease 系数之外追加的倍率，默认 `1.3`。
 
 升级后的默认行为与 0.2.2 完全一致，不会改变已有笔记的 frontmatter 结构。评分按钮会结合当前笔记的 `review_interval_days`、`review_ease` 和上述设置，显示本次点击后实际采用的间隔。
+
+## 暂停、恢复与掌握检验
+
+暂停只是用户对复习计划的调整，不代表已经掌握。暂停笔记不会进入逾期、今日和未来计划，但会保留在看板的“已暂停”折叠区，可以直接点击“恢复复习”。当前笔记也提供暂停和恢复命令，不需要手改 frontmatter。
+
+AI 掌握检验是可选能力，需要用户自行配置模型。它会生成保持、辨析、迁移和生成四类闭卷问题，按原文证据评分，提交后显示缺失点和参考答案，并对通过或临界结果执行独立复核。置信度来自原文证据覆盖和两次评分的一致性，不只采用模型自行报告的百分比。第一次通过后还需等待 30 天进行延迟复检。
+
+每篇源文章只维护一份纵向掌握记录。失败、重试和延迟复检都会向同一 Markdown 文件追加 `Attempt N`。默认目录为 `Smart Review/Mastery Records`，目录不存在时自动创建。
+
+## AI 模型配置与网络披露
+
+掌握检验采用 BYOK，由用户提供 API 地址、API Key 和模型。支持 OpenAI、OpenAI-compatible、Anthropic、Gemini、Azure OpenAI 和 Ollama。OpenAI-compatible 可以连接提供兼容 Chat API 的 OpenRouter、DeepSeek、Groq、硅基流动、Together、LM Studio 和 vLLM 等服务。
+
+- 不需要向 Smart Review 作者注册账户或付费。
+- 只会把当前源文章、本次试题和用户回答发送到用户选定的模型服务商。
+- 不会发送知识库中的其他笔记、复习索引或 API Key。
+- API Key 和未完成的检验草稿保存在 Vault 内的插件 `data.json`；如果用户同步 Obsidian 配置文件，该文件也可能被同步。
+- Obsidian 不会加密社区插件的 `data.json`；敏感材料建议使用本地模型，并保护好设备和 Vault。
+- 插件不包含客户端遥测和广告。
+
+模型服务商的数据保留和训练策略由服务商决定，发送敏感笔记前应先确认对应条款。
+
+## 0.3.0 更新内容
+
+- 新增暂停、恢复和重新学习流程。
+- 新增可选 BYOK AI 掌握检验、独立复核、置信度、参考答案和延迟复检。
+- 新增多厂商连接配置和模型列表获取。
+- 同一篇文章使用单一纵向掌握记录。
+- Review Center 改为容器级响应式布局，并修复旧侧栏页面迁移。
 
 ## 0.2.4 更新内容
 
@@ -80,6 +116,7 @@ Smart Review Center 是插件内置的单一主页面，不需要额外安装 Ma
 - `review-history.jsonl` = 复习动作历史记录，追加写入。
 - `review-ai-cards.json` = 当前 AI 复习卡片 Payload，覆盖写入。
 - `00-总览/今日复习.md` = Obsidian 原生今日复习中心，覆盖写入。
+- `Smart Review/Mastery Records/*.md` = 每篇源文章一份追加写入的掌握成长记录。
 
 插件默认用 Obsidian `vault.adapter.write(path, content)` 写入快照类文件，因此同一路径每次都是覆盖更新。用户可以在设置中修改路径，但同一个路径仍保持相同策略：索引、AI Payload、今日复习 Markdown 覆盖写入；历史 JSONL 只追加复习事件。
 
@@ -136,6 +173,9 @@ Refresh Review Data
 Mark Current Note Reviewed
 Generate Daily Review Markdown
 Generate AI Review Cards Payload
+Pause Current Note Review
+Resume Current Note Review
+Start Current Note Mastery Exam
 ```
 
 `Mark Current Note Reviewed` 默认按设置中的默认评分处理，初始值为 `good`。
@@ -165,7 +205,7 @@ review_lapses: 0
 
 当前阶段只生成 `review-ai-cards.json`，模式为 `prompt_payload`。插件会从今日和逾期任务读取笔记正文并生成 prompt，供用户复制到 ChatGPT / Dify / Ollama / 本地 AI 服务。
 
-本阶段不会增加 OpenAI API Key、Ollama、Dify、FastAPI AI Service 或任何远程网络请求。
+该 Payload 功能本身仍不会发起网络请求；只有用户主动发起掌握检验时，插件才会调用设置中选定的模型。
 
 ## 本地开发
 

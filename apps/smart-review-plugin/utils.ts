@@ -35,7 +35,7 @@ export function getOptionalNumber(value: unknown): number | null {
   return null;
 }
 
-export function assignOptionalString<T extends "domain" | "type" | "series" | "status">(
+export function assignOptionalString<T extends "domain" | "type" | "series" | "status" | "review_resume_at" | "review_mastery_recheck_at" | "review_mastery_record">(
   item: ReviewItem,
   key: T,
   value: unknown

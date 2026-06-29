@@ -162,12 +162,6 @@ function collectVaultMetadataStats(app: App, settings: SmartReviewSettings): Vau
       continue;
     }
 
-    activeNotes += 1;
-    if (normalizeDate(frontmatter.next_review) !== null) {
-      notesWithNextReview += 1;
-    }
-
-    completenessTotal += calculateMetadataCompleteness(frontmatter, file, cache);
     const creationDate = getCreationDate(frontmatter, file);
     incrementDateCount(creationCountsByDate, creationDate);
     creationDetails.push({
@@ -175,6 +169,16 @@ function collectVaultMetadataStats(app: App, settings: SmartReviewSettings): Vau
       file: file.path,
       title: getOptionalString(frontmatter.title) ?? file.basename
     });
+
+    const reviewStatus = getOptionalString(frontmatter.review_status) ?? "active";
+    if (reviewStatus !== "active") {
+      continue;
+    }
+    activeNotes += 1;
+    if (normalizeDate(frontmatter.next_review) !== null) {
+      notesWithNextReview += 1;
+    }
+    completenessTotal += calculateMetadataCompleteness(frontmatter, file, cache);
   }
 
   return {

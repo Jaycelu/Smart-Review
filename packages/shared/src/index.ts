@@ -2,6 +2,7 @@ export type {
   ReviewIndex,
   ReviewItem,
   ReviewIntervalRules,
+  ReviewLifecycleStatus,
   ReviewRating,
   ReviewState,
   ReviewSummary,
@@ -10,3 +11,5 @@ export type {
 } from "./types";
 export { calculateDaysDelta, calculateNextReviewDate, getLocalDateString, normalizeDate } from "./date";
 export { calculateSpacedReview, createEmptySummary, DEFAULT_REVIEW_INTERVAL_RULES, getReviewState, summarizeReviewItems } from "./review";
+export { calculateMasteryConfidence, passesMasteryGate } from "./mastery";
+export type { MasteryConfidence, MasteryDimension, MasteryGradeItemLike, MasteryGradeLike, MasteryStage } from "./mastery";

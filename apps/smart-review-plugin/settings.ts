@@ -1,7 +1,21 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { AbstractInputSuggest, App, PluginSettingTab, Setting, type TFolder } from "obsidian";
 import type SmartReviewPlugin from "./main";
 import { DEFAULT_REVIEW_INTERVAL_RULES, type ReviewIntervalRules, type ReviewRating } from "@smart-review/shared";
 import { resolveSmartReviewLocale, t, type SmartReviewLanguageSetting } from "./i18n";
+import type { MasteryAnswer, MasteryExamDefinition } from "./mastery-exam";
+
+export type AiProviderType = "openai" | "openai-compatible" | "anthropic" | "gemini" | "azure-openai" | "ollama";
+
+export interface AiConnectionSettings {
+  id: string;
+  name: string;
+  provider: AiProviderType;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  customHeaders: string;
+  timeoutMs: number;
+}
 
 export interface SmartReviewSettings {
   vaultName: string;
@@ -28,6 +42,17 @@ export interface SmartReviewSettings {
   scanOnStartup: boolean;
   showStatusBarCount: boolean;
   language: SmartReviewLanguageSetting;
+  masteryRecordsPath: string;
+  aiConnections: AiConnectionSettings[];
+  examinerConnectionId: string;
+  verifierConnectionId: string;
+  masteryDrafts: Record<string, MasteryDraftData>;
+}
+
+export interface MasteryDraftData {
+  definition: MasteryExamDefinition;
+  answers: MasteryAnswer[];
+  savedAt: string;
 }
 
 export const DEFAULT_SETTINGS: SmartReviewSettings = {
@@ -54,8 +79,18 @@ export const DEFAULT_SETTINGS: SmartReviewSettings = {
   defaultReviewRating: "good",
   scanOnStartup: true,
   showStatusBarCount: true,
-  language: "auto"
+  language: "auto",
+  masteryRecordsPath: "Smart Review/Mastery Records",
+  aiConnections: [],
+  examinerConnectionId: "",
+  verifierConnectionId: "",
+  masteryDrafts: {}
 };
+
+export function normalizeMasteryDrafts(value: unknown): Record<string, MasteryDraftData> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  return value as Record<string, MasteryDraftData>;
+}
 
 export const REVIEW_RATINGS: ReviewRating[] = ["again", "hard", "good", "easy"];
 
@@ -369,6 +404,143 @@ export class SmartReviewSettingTab extends PluginSettingTab {
           this.plugin.updateStatusBar();
         })
       );
+
+    new Setting(containerEl)
+      .setName(t(locale, "aiExaminerHeading"))
+      .setHeading();
+    containerEl.createEl("p", { text: t(locale, "aiExaminerDisclosure"), cls: "smart-review-setting-note" });
+
+    new Setting(containerEl)
+      .setName(t(locale, "masteryRecordsPath"))
+      .setDesc(t(locale, "masteryRecordsPathDesc"))
+      .addText((text) => {
+        new FolderInputSuggest(this.app, text.inputEl);
+        text
+          .setPlaceholder(DEFAULT_SETTINGS.masteryRecordsPath)
+          .setValue(this.plugin.settings.masteryRecordsPath)
+          .onChange(async (value) => {
+            this.plugin.settings.masteryRecordsPath = value.trim() || DEFAULT_SETTINGS.masteryRecordsPath;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    this.renderConnectionRoleSettings(containerEl, locale);
+    for (const connection of this.plugin.settings.aiConnections) {
+      this.renderAiConnection(containerEl, locale, connection);
+    }
+
+    new Setting(containerEl)
+      .setName(t(locale, "addAiConnection"))
+      .setDesc(t(locale, "addAiConnectionDesc"))
+      .addButton((button) => button.setButtonText(t(locale, "add")).setCta().onClick(async () => {
+        const connection = createDefaultAiConnection(this.plugin.settings.aiConnections.length + 1);
+        this.plugin.settings.aiConnections.push(connection);
+        if (this.plugin.settings.examinerConnectionId.length === 0) {
+          this.plugin.settings.examinerConnectionId = connection.id;
+        }
+        await this.plugin.saveSettings();
+        this.display();
+      }));
+  }
+
+  private renderConnectionRoleSettings(containerEl: HTMLElement, locale: ReturnType<typeof resolveSmartReviewLocale>): void {
+    const options = this.plugin.settings.aiConnections;
+    new Setting(containerEl)
+      .setName(t(locale, "examinerConnection"))
+      .setDesc(t(locale, "examinerConnectionDesc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("", t(locale, "notConfigured"));
+        for (const connection of options) {
+          dropdown.addOption(connection.id, connection.name);
+        }
+        dropdown.setValue(this.plugin.settings.examinerConnectionId).onChange(async (value) => {
+          this.plugin.settings.examinerConnectionId = value;
+          await this.plugin.saveSettings();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName(t(locale, "verifierConnection"))
+      .setDesc(t(locale, "verifierConnectionDesc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("", t(locale, "sameAsExaminer"));
+        for (const connection of options) {
+          dropdown.addOption(connection.id, connection.name);
+        }
+        dropdown.setValue(this.plugin.settings.verifierConnectionId).onChange(async (value) => {
+          this.plugin.settings.verifierConnectionId = value;
+          await this.plugin.saveSettings();
+        });
+      });
+  }
+
+  private renderAiConnection(containerEl: HTMLElement, locale: ReturnType<typeof resolveSmartReviewLocale>, connection: AiConnectionSettings): void {
+    const wrapper = containerEl.createDiv({ cls: "smart-review-ai-connection" });
+    new Setting(wrapper)
+      .setName(connection.name)
+      .setHeading()
+      .addButton((button) => button.setButtonText(t(locale, "testConnection")).onClick(async () => {
+        await this.plugin.testAiConnection(connection.id);
+      }))
+      .addButton((button) => button.setIcon("trash").setWarning().onClick(async () => {
+        this.plugin.settings.aiConnections = this.plugin.settings.aiConnections.filter((item) => item.id !== connection.id);
+        if (this.plugin.settings.examinerConnectionId === connection.id) {
+          this.plugin.settings.examinerConnectionId = "";
+        }
+        if (this.plugin.settings.verifierConnectionId === connection.id) {
+          this.plugin.settings.verifierConnectionId = "";
+        }
+        await this.plugin.saveSettings();
+        this.display();
+      }));
+
+    new Setting(wrapper).setName(t(locale, "connectionName")).addText((text) => text.setValue(connection.name).onChange(async (value) => {
+      connection.name = value.trim() || connection.name;
+      await this.plugin.saveSettings();
+    }));
+    new Setting(wrapper).setName(t(locale, "providerType")).addDropdown((dropdown) => dropdown
+      .addOption("openai", "OpenAI")
+      .addOption("openai-compatible", "OpenAI compatible")
+      .addOption("anthropic", "Anthropic")
+      .addOption("gemini", "Google Gemini")
+      .addOption("azure-openai", "Azure OpenAI")
+      .addOption("ollama", "Ollama")
+      .setValue(connection.provider)
+      .onChange(async (value) => {
+        connection.provider = isAiProviderType(value) ? value : "openai-compatible";
+        if (connection.baseUrl.length === 0) {
+          connection.baseUrl = getDefaultProviderUrl(connection.provider);
+        }
+        await this.plugin.saveSettings();
+        this.display();
+      }));
+    new Setting(wrapper).setName(t(locale, "providerUrl")).setDesc(t(locale, "providerUrlDesc")).addText((text) => text
+      .setPlaceholder(getDefaultProviderUrl(connection.provider))
+      .setValue(connection.baseUrl)
+      .onChange(async (value) => {
+        connection.baseUrl = value.trim();
+        await this.plugin.saveSettings();
+      }));
+    new Setting(wrapper).setName(t(locale, "apiKey")).setDesc(t(locale, "apiKeyDesc")).addText((text) => {
+      text.inputEl.type = "password";
+      text.setValue(connection.apiKey).onChange(async (value) => {
+        connection.apiKey = value.trim();
+        await this.plugin.saveSettings();
+      });
+    });
+    new Setting(wrapper).setName(t(locale, "modelName")).addText((text) => text.setValue(connection.model).onChange(async (value) => {
+      connection.model = value.trim();
+      await this.plugin.saveSettings();
+    })).addButton((button) => button.setButtonText(t(locale, "chooseModel")).onClick(async () => {
+      await this.plugin.chooseAiModel(connection.id);
+    }));
+    new Setting(wrapper).setName(t(locale, "customHeaders")).setDesc(t(locale, "customHeadersDesc")).addTextArea((text) => text
+      .setPlaceholder('{"X-Custom-Header":"value"}')
+      .setValue(connection.customHeaders)
+      .onChange(async (value) => {
+        connection.customHeaders = value.trim();
+        await this.plugin.saveSettings();
+      }));
   }
 
   private addMultiplierSetting(
@@ -400,6 +572,56 @@ function isSmartReviewLanguageSetting(value: string): value is SmartReviewLangua
   return value === "auto" || value === "en" || value === "zh";
 }
 
+export function normalizeAiConnections(value: unknown): AiConnectionSettings[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    if (typeof item !== "object" || item === null) {
+      return [];
+    }
+    const candidate = item as Partial<AiConnectionSettings>;
+    if (typeof candidate.id !== "string" || typeof candidate.name !== "string" || !isAiProviderType(candidate.provider)) {
+      return [];
+    }
+    return [{
+      id: candidate.id,
+      name: candidate.name,
+      provider: candidate.provider,
+      baseUrl: typeof candidate.baseUrl === "string" ? candidate.baseUrl : "",
+      apiKey: typeof candidate.apiKey === "string" ? candidate.apiKey : "",
+      model: typeof candidate.model === "string" ? candidate.model : "",
+      customHeaders: typeof candidate.customHeaders === "string" ? candidate.customHeaders : "",
+      timeoutMs: typeof candidate.timeoutMs === "number" ? candidate.timeoutMs : 90_000
+    }];
+  });
+}
+
+export function getDefaultProviderUrl(provider: AiProviderType): string {
+  if (provider === "anthropic") return "https://api.anthropic.com/v1";
+  if (provider === "gemini") return "https://generativelanguage.googleapis.com/v1beta";
+  if (provider === "ollama") return "http://localhost:11434";
+  if (provider === "azure-openai") return "";
+  return "https://api.openai.com/v1";
+}
+
+function createDefaultAiConnection(index: number): AiConnectionSettings {
+  return {
+    id: `connection-${Date.now().toString(36)}-${index}`,
+    name: `AI ${index}`,
+    provider: "openai-compatible",
+    baseUrl: "https://api.openai.com/v1",
+    apiKey: "",
+    model: "",
+    customHeaders: "",
+    timeoutMs: 90_000
+  };
+}
+
+function isAiProviderType(value: unknown): value is AiProviderType {
+  return value === "openai" || value === "openai-compatible" || value === "anthropic" || value === "gemini" || value === "azure-openai" || value === "ollama";
+}
+
 export function parseReviewIntervalDays(value: string): number {
   return Math.min(parsePositiveInteger(value, DEFAULT_SETTINGS.reviewIntervalDays), 3650);
 }
@@ -421,4 +643,20 @@ function parsePositiveInteger(value: string, fallback: number): number {
 function parsePositiveNumber(value: string, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+class FolderInputSuggest extends AbstractInputSuggest<TFolder> {
+  protected override getSuggestions(query: string): TFolder[] {
+    const normalized = query.trim().toLowerCase();
+    return this.app.vault.getAllFolders(false).filter((folder) => normalized.length === 0 || folder.path.toLowerCase().includes(normalized));
+  }
+
+  override renderSuggestion(folder: TFolder, el: HTMLElement): void {
+    el.setText(folder.path);
+  }
+
+  override selectSuggestion(folder: TFolder): void {
+    this.setValue(folder.path);
+    this.close();
+  }
 }

@@ -1,6 +1,6 @@
 {
   "name": "smart-review",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "private": true,
   "description": "Smart Review plugin workspace.",
   "type": "module",
@@ -8,7 +8,7 @@
     "build": "pnpm -r build",
     "build:plugin": "pnpm --filter @smart-review/shared build && pnpm --filter @smart-review/obsidian-plugin build",
     "dev": "pnpm --filter @smart-review/obsidian-plugin dev",
-    "lint": "pnpm -r lint",
+    "lint": "eslint apps/smart-review-plugin --max-warnings=0 && stylelint apps/smart-review-plugin/styles.css --max-warnings=0 && pnpm -r lint",
     "audit:review": "node scripts/audit-review-index.js",
     "analyze:history": "node scripts/analyze-review-history.js",
     "generate:ai-cards": "node scripts/generate-ai-review-cards.js",
@@ -19,6 +19,13 @@
   },
   "packageManager": "pnpm@9.15.0",
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "eslint-plugin-obsidianmd": "^0.3.0",
+    "globals": "^17.6.0",
+    "jiti": "^2.6.1",
+    "stylelint": "^16.26.1",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.59.1"
   }
 }

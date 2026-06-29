@@ -1,14 +1,20 @@
-import { Notice, Plugin, type TFile } from "obsidian";
-import type { ReviewIndex, ReviewRating } from "@smart-review/shared";
+import { Notice, Plugin, WorkspaceTabs, type TFile, type WorkspaceLeaf } from "obsidian";
+import { getLocalDateString, type ReviewIndex, type ReviewRating } from "@smart-review/shared";
 import { buildAiReviewCardsPayload } from "./ai-cards";
 import { buildSmartReviewAnalytics } from "./analytics-service";
 import type { SmartReviewAnalytics } from "./analytics-types";
 import { resolveSmartReviewLocale, t, type SmartReviewLocale } from "./i18n";
+import { MasteryConsentModal, MasteryExamModal, MasteryResultModal } from "./mastery-exam-modal";
+import { generateMasteryExam, runAndStoreMasteryExam, type MasteryAnswer, type MasteryStage } from "./mastery-exam";
 import { buildDailyReviewMarkdown } from "./markdown-export";
+import { PauseReviewModal } from "./pause-review-modal";
 import { calculateReviewResult, markFileReviewed } from "./review-actions";
+import { pauseReview, resumeReview, type PauseDuration } from "./review-lifecycle";
 import { ReviewCenterView, REVIEW_CENTER_VIEW_TYPE } from "./review-center-view";
 import { buildReviewIndex } from "./scanner";
-import { DEFAULT_SETTINGS, REVIEW_RATINGS, SmartReviewSettingTab, type SmartReviewSettings } from "./settings";
+import { DEFAULT_SETTINGS, REVIEW_RATINGS, SmartReviewSettingTab, normalizeAiConnections, normalizeMasteryDrafts, type AiConnectionSettings, type SmartReviewSettings } from "./settings";
+import { listAiModels, testAiConnection as verifyAiConnection } from "./ai-examiner";
+import { ModelPickerModal } from "./model-picker-modal";
 import { SmartReviewStatusBar } from "./status-bar";
 import { ensureParentFolder, isMissingFileError, normalizeOutputPath, toFrontmatter } from "./utils";
 
@@ -39,6 +45,30 @@ export default class SmartReviewPlugin extends Plugin {
       name: t(this.locale, "openCenter"),
       callback: () => {
         void this.openReviewCenter();
+      }
+    });
+
+    this.addCommand({
+      id: "start-current-note-mastery-exam",
+      name: t(this.locale, "startCurrentMasteryExam"),
+      callback: () => {
+        void this.startCurrentNoteMasteryExam();
+      }
+    });
+
+    this.addCommand({
+      id: "pause-current-note-review",
+      name: t(this.locale, "pauseCurrentReview"),
+      callback: () => {
+        this.openPauseCurrentNote();
+      }
+    });
+
+    this.addCommand({
+      id: "resume-current-note-review",
+      name: t(this.locale, "resumeCurrentReview"),
+      callback: () => {
+        void this.resumeCurrentNoteReview();
       }
     });
 
@@ -109,7 +139,9 @@ export default class SmartReviewPlugin extends Plugin {
     const loaded = (await this.loadData()) as Partial<SmartReviewSettings> | null;
     this.settings = {
       ...DEFAULT_SETTINGS,
-      ...loaded
+      ...loaded,
+      aiConnections: normalizeAiConnections(loaded?.aiConnections),
+      masteryDrafts: normalizeMasteryDrafts(loaded?.masteryDrafts)
     };
   }
 
@@ -122,8 +154,9 @@ export default class SmartReviewPlugin extends Plugin {
   }
 
   async openReviewCenter(): Promise<void> {
-    const existing = this.app.workspace.getLeavesOfType(REVIEW_CENTER_VIEW_TYPE)[0];
-    const leaf = existing ?? this.app.workspace.getLeaf(true);
+    const existingLeaves = this.app.workspace.getLeavesOfType(REVIEW_CENTER_VIEW_TYPE);
+    const mainLeaf = existingLeaves.find((candidate) => !this.isSideDockLeaf(candidate));
+    const leaf = mainLeaf ?? this.app.workspace.getLeaf("tab");
     if (leaf === null) {
       new Notice(t(this.locale, "unableOpenCenter"));
       return;
@@ -131,6 +164,11 @@ export default class SmartReviewPlugin extends Plugin {
 
     await leaf.setViewState({ type: REVIEW_CENTER_VIEW_TYPE, active: true });
     await this.app.workspace.revealLeaf(leaf);
+    for (const existing of existingLeaves) {
+      if (existing !== leaf && this.isSideDockLeaf(existing)) {
+        existing.detach();
+      }
+    }
     if (this.currentIndex === null) {
       await this.loadReviewIndexSnapshot();
     }
@@ -212,6 +250,105 @@ export default class SmartReviewPlugin extends Plugin {
     await this.reviewFile(file, rating);
   }
 
+  openPauseReview(filePath: string): void {
+    const file = this.app.vault.getFileByPath(filePath);
+    if (file === null) {
+      new Notice(t(this.locale, "noteNotFound", { path: filePath }));
+      return;
+    }
+
+    new PauseReviewModal(this.app, file, this.locale, async (duration, customDate) => {
+      await this.pauseFile(file, duration, customDate);
+    }).open();
+  }
+
+  async resumeReviewByPath(filePath: string): Promise<void> {
+    const file = this.app.vault.getFileByPath(filePath);
+    if (file === null) {
+      new Notice(t(this.locale, "noteNotFound", { path: filePath }));
+      return;
+    }
+
+    await this.resumeFile(file);
+  }
+
+  async startMasteryExamByPath(filePath: string): Promise<void> {
+    const file = this.app.vault.getFileByPath(filePath);
+    if (file === null) {
+      new Notice(t(this.locale, "noteNotFound", { path: filePath }));
+      return;
+    }
+    const examiner = this.getAiConnection(this.settings.examinerConnectionId);
+    if (examiner === null) {
+      new Notice(t(this.locale, "configureAiExaminerFirst"));
+      this.openPluginSettings();
+      return;
+    }
+    if (this.getMasteryStage(file) === "recheck") {
+      const frontmatter = toFrontmatter(this.app.metadataCache.getFileCache(file)?.frontmatter);
+      const recheckAt = typeof frontmatter.review_mastery_recheck_at === "string" ? frontmatter.review_mastery_recheck_at : "";
+      if (recheckAt.length > 0 && recheckAt > getLocalDateString()) {
+        new Notice(t(this.locale, "masteryRecheckNotDue", { date: recheckAt }));
+        return;
+      }
+    }
+
+    new MasteryConsentModal(this.app, file, examiner, this.locale, async () => {
+      await this.prepareMasteryExam(file, examiner);
+    }).open();
+  }
+
+  async testAiConnection(connectionId: string): Promise<void> {
+    const connection = this.getAiConnection(connectionId);
+    if (connection === null) {
+      new Notice(t(this.locale, "aiConnectionMissing"));
+      return;
+    }
+    const notice = new Notice(t(this.locale, "testingAiConnection"), 0);
+    try {
+      await verifyAiConnection(connection);
+      notice.hide();
+      new Notice(t(this.locale, "aiConnectionSuccess"));
+    } catch (error) {
+      notice.hide();
+      console.error("AI connection test failed", error);
+      new Notice(t(this.locale, "aiConnectionFailed", { error: getErrorMessage(error) }), 8_000);
+    }
+  }
+
+  async chooseAiModel(connectionId: string): Promise<void> {
+    const connection = this.getAiConnection(connectionId);
+    if (connection === null) {
+      new Notice(t(this.locale, "aiConnectionMissing"));
+      return;
+    }
+    const notice = new Notice(t(this.locale, "loadingModels"), 0);
+    try {
+      const models = await listAiModels(connection);
+      notice.hide();
+      if (models.length === 0) {
+        new Notice(t(this.locale, "manualModelRequired"));
+        return;
+      }
+      new ModelPickerModal(this.app, models, (model) => {
+        connection.model = model;
+        void this.saveSettings().then(() => new Notice(t(this.locale, "modelSelected", { model })));
+      }).open();
+    } catch (error) {
+      notice.hide();
+      console.error("Failed to discover AI models", error);
+      new Notice(t(this.locale, "modelDiscoveryFailed", { error: getErrorMessage(error) }), 8_000);
+    }
+  }
+
+  openPluginSettings(): void {
+    const appWithSettings = this.app as typeof this.app & {
+      setting?: { open(): void; openTabById(id: string): void };
+    };
+    appWithSettings.setting?.open();
+    appWithSettings.setting?.openTabById(this.manifest.id);
+  }
+
   getReviewIntervalDays(filePath: string, rating: ReviewRating): number | null {
     const file = this.app.vault.getFileByPath(filePath);
     if (file === null) {
@@ -288,6 +425,123 @@ export default class SmartReviewPlugin extends Plugin {
       console.error("Failed to mark note reviewed", error);
       new Notice(t(this.locale, "reviewFailed"));
     }
+  }
+
+  private openPauseCurrentNote(): void {
+    const file = this.app.workspace.getActiveFile();
+    if (file === null || file.extension !== "md") {
+      new Notice(t(this.locale, "openMarkdownBeforeReview"));
+      return;
+    }
+    this.openPauseReview(file.path);
+  }
+
+  private async resumeCurrentNoteReview(): Promise<void> {
+    const file = this.app.workspace.getActiveFile();
+    if (file === null || file.extension !== "md") {
+      new Notice(t(this.locale, "openMarkdownBeforeReview"));
+      return;
+    }
+    await this.resumeFile(file);
+  }
+
+  private async startCurrentNoteMasteryExam(): Promise<void> {
+    const file = this.app.workspace.getActiveFile();
+    if (file === null || file.extension !== "md") {
+      new Notice(t(this.locale, "openMarkdownBeforeReview"));
+      return;
+    }
+    await this.startMasteryExamByPath(file.path);
+  }
+
+  private async prepareMasteryExam(file: TFile, examiner: AiConnectionSettings): Promise<void> {
+    const stage = this.getMasteryStage(file);
+    const loading = new Notice(t(this.locale, "generatingMasteryExam"), 0);
+    try {
+      const source = await this.app.vault.cachedRead(file);
+      const existingDraft = this.settings.masteryDrafts[file.path];
+      const definition = existingDraft?.definition.stage === stage
+        ? existingDraft.definition
+        : await generateMasteryExam(examiner, source, stage, this.locale);
+      loading.hide();
+      const saveDraft = async (answers: MasteryAnswer[]) => {
+        this.settings.masteryDrafts[file.path] = { definition, answers, savedAt: new Date().toISOString() };
+        await this.saveSettings();
+      };
+      const discardDraft = async () => {
+        delete this.settings.masteryDrafts[file.path];
+        await this.saveSettings();
+      };
+      new MasteryExamModal(this.app, file, definition, this.locale, existingDraft?.answers ?? [], saveDraft, discardDraft, async (answers) => {
+        this.settings.masteryDrafts[file.path] = { definition, answers, savedAt: new Date().toISOString() };
+        await this.saveSettings();
+        const grading = new Notice(t(this.locale, "gradingMasteryExam"), 0);
+        try {
+          const verifier = this.getAiConnection(this.settings.verifierConnectionId) ?? examiner;
+          const result = await runAndStoreMasteryExam({
+            app: this.app,
+            settings: this.settings,
+            file,
+            source,
+            definition,
+            answers,
+            examiner,
+            verifier,
+            locale: this.locale
+          });
+          grading.hide();
+          delete this.settings.masteryDrafts[file.path];
+          await this.saveSettings();
+          await this.refreshReviewData({ writeIndex: true, notice: false });
+          new MasteryResultModal(this.app, result, this.locale).open();
+        } catch (error) {
+          grading.hide();
+          console.error("Failed to grade mastery exam", error);
+          new Notice(t(this.locale, "masteryExamFailed", { error: getErrorMessage(error) }), 8_000);
+        }
+      }).open();
+    } catch (error) {
+      loading.hide();
+      console.error("Failed to generate mastery exam", error);
+      new Notice(t(this.locale, "masteryExamFailed", { error: getErrorMessage(error) }), 8_000);
+    }
+  }
+
+  private getAiConnection(connectionId: string): AiConnectionSettings | null {
+    if (connectionId.length === 0) return null;
+    return this.settings.aiConnections.find((connection) => connection.id === connectionId) ?? null;
+  }
+
+  private getMasteryStage(file: TFile): MasteryStage {
+    const frontmatter = toFrontmatter(this.app.metadataCache.getFileCache(file)?.frontmatter);
+    return frontmatter.review_status === "mastery_pending" ? "recheck" : "initial";
+  }
+
+  private async pauseFile(file: TFile, duration: PauseDuration, customDate?: string): Promise<void> {
+    try {
+      await pauseReview(this.app, file, duration, customDate);
+      await this.refreshReviewData({ writeIndex: true, notice: false });
+      new Notice(t(this.locale, "reviewPaused", { title: file.basename }));
+    } catch (error) {
+      console.error("Failed to pause review", error);
+      new Notice(t(this.locale, "reviewStateFailed"));
+    }
+  }
+
+  private async resumeFile(file: TFile): Promise<void> {
+    try {
+      await resumeReview(this.app, file);
+      await this.refreshReviewData({ writeIndex: true, notice: false });
+      new Notice(t(this.locale, "reviewResumed", { title: file.basename }));
+    } catch (error) {
+      console.error("Failed to resume review", error);
+      new Notice(t(this.locale, "reviewStateFailed"));
+    }
+  }
+
+  private isSideDockLeaf(leaf: WorkspaceLeaf): boolean {
+    return leaf.parent instanceof WorkspaceTabs &&
+      (leaf.parent.parent === this.app.workspace.leftSplit || leaf.parent.parent === this.app.workspace.rightSplit);
   }
 
   private async writeReviewIndex(index: ReviewIndex): Promise<void> {
@@ -376,6 +630,10 @@ export default class SmartReviewPlugin extends Plugin {
       })
     );
   }
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function isReviewIndex(value: unknown): value is ReviewIndex {

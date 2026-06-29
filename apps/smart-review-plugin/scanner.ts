@@ -5,7 +5,8 @@ import {
   normalizeDate,
   summarizeReviewItems,
   type ReviewIndex,
-  type ReviewItem
+  type ReviewItem,
+  type ReviewLifecycleStatus
 } from "@smart-review/shared";
 import type { SmartReviewSettings } from "./settings";
 import {
@@ -14,6 +15,7 @@ import {
   collectTags,
   createObsidianUri,
   getOptionalString,
+  getOptionalNumber,
   isAllowedStatus,
   parseFilterList,
   parseFolderPrefixList,
@@ -23,13 +25,17 @@ import {
 export function buildReviewIndex(app: App, settings: SmartReviewSettings): ReviewIndex {
   const vaultName = resolveVaultName(app, settings);
   const files = app.vault.getMarkdownFiles();
-  const items = files.flatMap((file) => createReviewItem(app, settings, file, vaultName));
+  const allItems = files.flatMap((file) => createReviewItem(app, settings, file, vaultName));
+  const items = allItems.filter((item) => item.review_status === "active" && shouldIncludeExportScope(settings, item));
 
   return {
     generated_at: new Date().toISOString(),
     vault_name: vaultName,
     summary: summarizeReviewItems(items),
-    items
+    items,
+    paused_items: allItems.filter((item) => item.review_status === "paused"),
+    mastery_pending_items: allItems.filter((item) => item.review_status === "mastery_pending"),
+    mastered_items: allItems.filter((item) => item.review_status === "mastered")
   };
 }
 
@@ -59,6 +65,7 @@ function createReviewItem(app: App, settings: SmartReviewSettings, file: TFile, 
     next_review: nextReview,
     review_state: getReviewState(daysDelta),
     days_delta: daysDelta,
+    review_status: normalizeReviewStatus(frontmatter.review_status),
     tags: collectTags(frontmatter.tags, cache),
     obsidian_uri: createObsidianUri(vaultName, file.path)
   };
@@ -68,6 +75,15 @@ function createReviewItem(app: App, settings: SmartReviewSettings, file: TFile, 
   assignOptionalString(item, "series", frontmatter.series);
   assignOptionalOrder(item, frontmatter.order);
   assignOptionalString(item, "status", frontmatter.status);
+  assignOptionalString(item, "review_resume_at", frontmatter.review_resume_at);
+  assignOptionalString(item, "review_mastery_recheck_at", frontmatter.review_mastery_recheck_at);
+  assignOptionalString(item, "review_mastery_record", frontmatter.review_mastery_record);
+  const reviewCount = getOptionalNumber(frontmatter.review_count);
+  if (reviewCount !== null) item.review_count = reviewCount;
+  const reviewInterval = getOptionalNumber(frontmatter.review_interval_days);
+  if (reviewInterval !== null) item.review_interval_days = reviewInterval;
+  const rating = getOptionalString(frontmatter.review_rating);
+  if (rating === "again" || rating === "hard" || rating === "good" || rating === "easy") item.review_rating = rating;
 
   return shouldIncludeItem(settings, item) ? [item] : [];
 }
@@ -78,10 +94,6 @@ function shouldIgnoreFolder(filePath: string, ignoredFolderPrefixes: string): bo
 }
 
 function shouldIncludeItem(settings: SmartReviewSettings, item: ReviewItem): boolean {
-  if (settings.exportScope === "due_only" && !["overdue", "today", "next_7_days"].includes(item.review_state)) {
-    return false;
-  }
-
   const includedTypes = parseFilterList(settings.includedTypes);
   if (includedTypes.length > 0 && !includedTypes.includes(item.type ?? "")) {
     return false;
@@ -98,4 +110,12 @@ function shouldIncludeItem(settings: SmartReviewSettings, item: ReviewItem): boo
   }
 
   return true;
+}
+
+function shouldIncludeExportScope(settings: SmartReviewSettings, item: ReviewItem): boolean {
+  return settings.exportScope !== "due_only" || ["overdue", "today", "next_7_days"].includes(item.review_state);
+}
+
+function normalizeReviewStatus(value: unknown): ReviewLifecycleStatus {
+  return value === "paused" || value === "mastery_pending" || value === "mastered" ? value : "active";
 }

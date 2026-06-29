@@ -4,7 +4,7 @@ Languages: [English](README.md) | [简体中文](README.zh-CN.md)
 
 [Plugin source](apps/smart-review-plugin)
 
-Smart Review is a review center for Obsidian notes that uses Properties / YAML frontmatter. It builds review queues from `next_review`, lets you complete reviews inside Obsidian, writes spaced-review metadata back to notes, records review history, and exports AI review-card prompt payloads.
+Smart Review is a review center for Obsidian notes that uses Properties / YAML frontmatter. It builds review queues from `next_review`, supports adaptive feedback, lets users pause and resume notes, and optionally runs evidence-grounded AI mastery exams with user-configured models.
 
 The Obsidian plugin works on its own and does not require any external companion app.
 
@@ -28,6 +28,9 @@ The Obsidian plugin works on its own and does not require any external companion
 - Append review events to `review-history.jsonl`.
 - Generate a native Markdown daily review page.
 - Generate `review-ai-cards.json` as a prompt payload without calling external AI APIs.
+- Pause notes for 30 days, 90 days, a custom date, or indefinitely, then resume without editing frontmatter.
+- Run optional AI mastery exams with independent verification, confidence levels, delayed rechecks, and reference answers.
+- Connect OpenAI-compatible APIs, OpenAI, Anthropic, Gemini, Azure OpenAI, and Ollama using your own credentials.
 
 ## Smart Review Center
 
@@ -45,6 +48,10 @@ It includes:
 - Vault creation heatmap based on `frontmatter.created`, file creation time, or file modified time.
 - Domain, tag, and review rating distributions.
 - Clickable distribution rows with in-page drill-down details and collapsible long lists.
+- Collapsible paused, mastery-recheck, mastered, and suggested-mastery groups.
+- Container-responsive task cards that remain usable in narrow leaves.
+
+Clicking the Ribbon icon opens Review Center in a main workspace tab. If an older workspace still has Review Center in a side dock, the explicit open action migrates it to the main area. Manually docking it again remains supported by the container-responsive layout.
 
 The health score is a lightweight operational indicator. It combines review coverage, overdue control, recent activity, metadata completeness, and AI card readiness. It is not an absolute measure of knowledge quality.
 
@@ -60,7 +67,36 @@ Open `Settings -> Smart Review` to tune the adaptive scheduling rules:
 
 Existing users keep the same scheduling behavior after upgrading. The buttons show the interval calculated from the selected rules and each note's current `review_interval_days` and `review_ease` values.
 
-## What's New in 0.2.4
+## Pause, Resume, and Mastery
+
+Pausing is a scheduling decision and does not mark a note as mastered. Paused notes leave the active plan but remain in the collapsible **Paused** group with a direct **Resume review** action. Commands are also available for pausing and resuming the current note.
+
+AI mastery exams are optional and require a configured model. They generate closed-book questions, grade answers against article-grounded criteria, show reference answers after submission, independently verify qualifying results, and require a delayed recheck before marking a note mastered. Confidence is derived from source-evidence coverage and agreement between the examiner and verifier, not from a model-provided percentage alone.
+
+Every source article uses one longitudinal Markdown mastery record. Failed attempts, retries, and delayed rechecks append new `Attempt N` sections to the same file. The default folder is `Smart Review/Mastery Records`, and missing folders are created automatically.
+
+## AI Provider Setup and Network Disclosure
+
+AI mastery exams use bring-your-own-key connections. Supported connection types are OpenAI, OpenAI-compatible, Anthropic, Google Gemini, Azure OpenAI, and Ollama. OpenAI-compatible endpoints cover services such as OpenRouter, DeepSeek, Groq, SiliconFlow, Together, LM Studio, and vLLM when they expose compatible chat APIs.
+
+- No Smart Review account or payment is required.
+- Only the current source article, generated exam, and submitted answers are sent to the provider selected by the user.
+- Other vault notes, the review index, and provider API keys are not included in exam requests.
+- API keys and unfinished exam drafts are stored in the plugin's vault-local `data.json`; they may sync if the user syncs Obsidian configuration files.
+- Obsidian does not encrypt community plugin `data.json`; use a local provider for sensitive material or protect access to the vault and device.
+- The plugin does not include client-side telemetry or advertising.
+
+Provider data retention and training policies are controlled by the selected provider. Review those terms before sending sensitive notes.
+
+## What's New in 0.3.0
+
+- Added pause, resume, and restart-learning workflows.
+- Added optional BYOK AI mastery exams, independent verification, confidence levels, reference answers, and delayed rechecks.
+- Added multi-provider AI connection profiles and model discovery.
+- Added one longitudinal mastery record per source article.
+- Added container-responsive Review Center layouts and side-dock-to-main-tab migration.
+
+## Previous 0.2.4 Changes
 
 - Added configurable adaptive interval rules for all four review ratings.
 - Added per-note interval previews to the review feedback buttons.
@@ -107,6 +143,9 @@ The script copies the plugin files to:
 - `Mark Current Note Reviewed`
 - `Generate Daily Review Markdown`
 - `Generate AI Review Cards Payload`
+- `Pause Current Note Review`
+- `Resume Current Note Review`
+- `Start Current Note Mastery Exam`
 
 ## Generated Files
 
@@ -114,6 +153,7 @@ The script copies the plugin files to:
 - `review-history.jsonl`: Review event history, appended per review action.
 - `review-ai-cards.json`: Current AI review-card prompt payload, overwritten on each generation.
 - `00-总览/今日复习.md`: Native Markdown review page, overwritten on each generation.
+- `Smart Review/Mastery Records/*.md`: One append-only mastery history per source article.
 
 ## GitHub Release Assets
 

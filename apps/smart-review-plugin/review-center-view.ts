@@ -1,4 +1,4 @@
-import { ItemView, Notice, type WorkspaceLeaf } from "obsidian";
+import { ItemView, Menu, Notice, type WorkspaceLeaf } from "obsidian";
 import type { ReviewItem, ReviewRating, ReviewState } from "@smart-review/shared";
 import { UNCATEGORIZED_DOMAIN, type DistributionItem, type HeatmapDay, type NoteCreationDetail, type ReviewHistoryDetail, type SmartReviewAnalytics } from "./analytics-types";
 import { t, type SmartReviewLocale, type SmartReviewTranslationKey } from "./i18n";
@@ -37,6 +37,7 @@ interface HeatmapSelection {
 
 export class ReviewCenterView extends ItemView {
   private readonly expandedGroups = new Set<ReviewState>();
+  private readonly expandedLifecycleGroups = new Set<string>();
   private selectedDrilldown: DrilldownSelection | null = null;
   private drilldownExpanded = false;
   private selectedHeatmap: HeatmapSelection | null = null;
@@ -86,7 +87,7 @@ export class ReviewCenterView extends ItemView {
       return;
     }
 
-    this.renderReviewPlan(container, index.items);
+    this.renderReviewPlan(container, index);
 
     if (analytics === null) {
       container.createDiv({
@@ -138,7 +139,8 @@ export class ReviewCenterView extends ItemView {
     };
   }
 
-  private renderReviewPlan(container: HTMLElement, items: ReviewItem[]): void {
+  private renderReviewPlan(container: HTMLElement, index: NonNullable<SmartReviewPlugin["currentIndex"]>): void {
+    const items = index.items;
     const section = container.createDiv({ cls: "smart-review-plan-section" });
     this.renderSectionHeading(section, t(this.plugin.locale, "planTitle"), t(this.plugin.locale, "planSubtitle"));
 
@@ -153,6 +155,11 @@ export class ReviewCenterView extends ItemView {
     for (const group of PLAN_GROUPS) {
       this.renderPlanGroup(section, group, items.filter((item) => item.review_state === group.state));
     }
+
+    this.renderLifecycleGroup(section, "paused", t(this.plugin.locale, "pausedGroup"), index.paused_items ?? []);
+    this.renderLifecycleGroup(section, "mastery_pending", t(this.plugin.locale, "masteryPendingGroup"), index.mastery_pending_items ?? []);
+    this.renderLifecycleGroup(section, "mastered", t(this.plugin.locale, "masteredGroup"), index.mastered_items ?? []);
+    this.renderLifecycleGroup(section, "mastery_candidate", t(this.plugin.locale, "masteryCandidateGroup"), getMasteryCandidates(items, this.plugin.currentAnalytics?.details.reviewHistory ?? []));
   }
 
   private renderPlanGroup(container: HTMLElement, group: PlanGroup, items: ReviewItem[]): void {
@@ -228,7 +235,8 @@ export class ReviewCenterView extends ItemView {
       }
     }
 
-    const feedback = task.createDiv({ cls: "smart-review-rating-actions" });
+    const taskActions = task.createDiv({ cls: "smart-review-task-actions" });
+    const feedback = taskActions.createDiv({ cls: "smart-review-rating-actions" });
     for (const rating of REVIEW_RATINGS) {
       const intervalDays = this.plugin.getReviewIntervalDays(item.file, rating);
       const button = feedback.createEl("button", {
@@ -241,6 +249,74 @@ export class ReviewCenterView extends ItemView {
       button.onclick = async () => {
         await this.plugin.reviewFileByPath(item.file, rating);
       };
+    }
+
+    const more = taskActions.createEl("button", { cls: "smart-review-link-button smart-review-more-button", text: t(this.plugin.locale, "moreActions") });
+    more.onclick = (event) => {
+      const menu = new Menu();
+      menu.addItem((entry) => entry.setTitle(t(this.plugin.locale, "pauseReview")).setIcon("pause").onClick(() => {
+        this.plugin.openPauseReview(item.file);
+      }));
+      menu.addItem((entry) => entry.setTitle(t(this.plugin.locale, "startMasteryExam")).setIcon("graduation-cap").onClick(() => {
+        void this.plugin.startMasteryExamByPath(item.file);
+      }));
+      menu.showAtMouseEvent(event);
+    };
+  }
+
+  private renderLifecycleGroup(container: HTMLElement, key: string, titleText: string, items: ReviewItem[]): void {
+    const section = container.createDiv({ cls: `smart-review-plan-group smart-review-plan-group-${key}` });
+    const heading = section.createDiv({ cls: "smart-review-plan-group-heading" });
+    const title = heading.createDiv({ cls: "smart-review-plan-group-title" });
+    title.createEl("h3", { text: titleText });
+    title.createSpan({ cls: "smart-review-subtle-badge", text: String(items.length) });
+
+    const expanded = this.expandedLifecycleGroups.has(key);
+    if (items.length > 0) {
+      const toggle = heading.createEl("button", { cls: "smart-review-link-button", text: expanded ? t(this.plugin.locale, "collapse") : t(this.plugin.locale, "expandAll") });
+      toggle.onclick = () => {
+        if (expanded) {
+          this.expandedLifecycleGroups.delete(key);
+        } else {
+          this.expandedLifecycleGroups.add(key);
+        }
+        this.render();
+      };
+    }
+
+    if (!expanded || items.length === 0) {
+      section.createDiv({ cls: "smart-review-empty-state smart-review-empty-inline", text: items.length === 0 ? t(this.plugin.locale, "noManagedNotes") : t(this.plugin.locale, "collapsedHint") });
+      return;
+    }
+
+    const list = section.createDiv({ cls: "smart-review-plan-list" });
+    for (const item of items) {
+      const row = list.createDiv({ cls: "smart-review-plan-item smart-review-managed-item" });
+      const main = row.createDiv({ cls: "smart-review-plan-main" });
+      const name = main.createEl("button", { cls: "smart-review-task-title", text: item.title });
+      name.onclick = () => {
+        const file = this.app.vault.getFileByPath(item.file);
+        if (file !== null) {
+          void this.app.workspace.getLeaf(false).openFile(file);
+        }
+      };
+      main.createDiv({ cls: "smart-review-task-path", text: item.file });
+      if (item.review_resume_at !== undefined) {
+        const meta = main.createDiv({ cls: "smart-review-plan-meta" });
+        renderMeta(meta, t(this.plugin.locale, "resumeAt"), item.review_resume_at);
+      }
+
+      const actions = row.createDiv({ cls: "smart-review-managed-actions" });
+      if (key === "paused") {
+        this.renderActionButton(actions, t(this.plugin.locale, "resumeReview"), async () => this.plugin.resumeReviewByPath(item.file));
+        this.renderActionButton(actions, t(this.plugin.locale, "startMasteryExam"), async () => this.plugin.startMasteryExamByPath(item.file));
+      } else if (key === "mastery_pending") {
+        this.renderActionButton(actions, t(this.plugin.locale, "startMasteryRecheck"), async () => this.plugin.startMasteryExamByPath(item.file));
+      } else if (key === "mastery_candidate") {
+        this.renderActionButton(actions, t(this.plugin.locale, "startMasteryExam"), async () => this.plugin.startMasteryExamByPath(item.file));
+      } else {
+        this.renderActionButton(actions, t(this.plugin.locale, "restartLearning"), async () => this.plugin.resumeReviewByPath(item.file));
+      }
     }
   }
 
@@ -519,6 +595,18 @@ export class ReviewCenterView extends ItemView {
     const fill = progress.createDiv({ cls: "smart-review-progress-fill" });
     fill.setAttr("style", `width: ${Math.round(Math.max(0, Math.min(1, ratio)) * 100)}%;`);
   }
+}
+
+function getMasteryCandidates(items: ReviewItem[], history: ReviewHistoryDetail[]): ReviewItem[] {
+  return items.filter((item) => {
+    if ((item.review_count ?? 0) < 3 || (item.review_interval_days ?? 0) < 60) return false;
+    const recent = history
+      .filter((entry) => entry.file === item.file)
+      .sort((left, right) => right.reviewedAt.localeCompare(left.reviewedAt))
+      .slice(0, 3);
+    if (recent.length < 3 || recent.some((entry) => entry.rating === "again")) return false;
+    return recent.slice(0, 2).every((entry) => entry.rating === "good" || entry.rating === "easy");
+  });
 }
 
 function renderMeta(container: HTMLElement, label: string, value: string | undefined): void {

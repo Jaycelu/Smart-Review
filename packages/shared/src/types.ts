@@ -1,5 +1,6 @@
 export type ReviewState = "overdue" | "today" | "next_7_days" | "future" | "invalid";
 export type ReviewRating = "again" | "hard" | "good" | "easy";
+export type ReviewLifecycleStatus = "active" | "paused" | "mastery_pending" | "mastered";
 
 export interface ReviewItem {
   title: string;
@@ -12,6 +13,13 @@ export interface ReviewItem {
   series?: string;
   order?: number | string;
   status?: string;
+  review_status: ReviewLifecycleStatus;
+  review_resume_at?: string;
+  review_mastery_recheck_at?: string;
+  review_mastery_record?: string;
+  review_count?: number;
+  review_rating?: ReviewRating;
+  review_interval_days?: number;
   tags: string[];
   obsidian_uri: string;
 }
@@ -30,6 +38,9 @@ export interface ReviewIndex {
   vault_name: string;
   summary: ReviewSummary;
   items: ReviewItem[];
+  paused_items?: ReviewItem[];
+  mastery_pending_items?: ReviewItem[];
+  mastered_items?: ReviewItem[];
 }
 
 export interface SpacedReviewInput {

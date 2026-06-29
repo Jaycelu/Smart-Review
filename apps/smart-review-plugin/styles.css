@@ -31,7 +31,9 @@
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 24px 32px;
+  container-name: smart-review-center;
+  container-type: inline-size;
+  padding: 24px clamp(14px, 3cqw, 32px);
   box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
@@ -324,6 +326,96 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(58px, 1fr));
   gap: 6px;
+}
+
+.smart-review-task-actions,
+.smart-review-managed-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.smart-review-more-button {
+  width: 100%;
+}
+
+.smart-review-plan-group-paused,
+.smart-review-plan-group-mastery_pending,
+.smart-review-plan-group-mastered {
+  border-color: color-mix(in srgb, var(--text-muted) 35%, var(--background-modifier-border));
+}
+
+.smart-review-plan-group-mastery_candidate {
+  border-color: color-mix(in srgb, var(--interactive-accent) 35%, var(--background-modifier-border));
+}
+
+.smart-review-managed-item {
+  grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
+}
+
+.smart-review-ai-connection {
+  margin: 14px 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  padding: 0 12px 8px;
+  background: var(--background-secondary);
+}
+
+.smart-review-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.smart-review-mastery-modal {
+  width: min(760px, 90vw);
+}
+
+.smart-review-question,
+.smart-review-result-item,
+.smart-review-result-summary {
+  margin: 12px 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  padding: 12px;
+  background: var(--background-secondary);
+}
+
+.smart-review-question h3,
+.smart-review-result-item h3 {
+  margin: 0 0 8px;
+}
+
+.smart-review-answer-input {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+}
+
+.smart-review-result-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.smart-review-result-summary p {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+}
+
+.smart-review-result-pass {
+  border-color: color-mix(in srgb, var(--color-green) 45%, var(--background-modifier-border));
+}
+
+.smart-review-result-fail {
+  border-color: color-mix(in srgb, var(--text-error) 45%, var(--background-modifier-border));
+}
+
+.smart-review-result-next {
+  font-weight: 600;
 }
 
 .smart-review-rating {
@@ -738,5 +830,56 @@
 
   .smart-review-state {
     justify-self: start;
+  }
+}
+
+@container smart-review-center (max-width: 760px) {
+  .smart-review-header,
+  .smart-review-plan-item,
+  .smart-review-task-flow-row,
+  .smart-review-managed-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .smart-review-header-actions,
+  .smart-review-action-row {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .smart-review-last-sync {
+    white-space: normal;
+  }
+
+  .smart-review-task-actions,
+  .smart-review-managed-actions {
+    width: 100%;
+  }
+
+  .smart-review-rating-actions,
+  .smart-review-metrics-grid,
+  .smart-review-distributions-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container smart-review-center (max-width: 420px) {
+  .smart-review-header h1 {
+    font-size: 24px;
+  }
+
+  .smart-review-plan-title-row,
+  .smart-review-rating-actions,
+  .smart-review-metrics-grid,
+  .smart-review-distributions-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .smart-review-state {
+    justify-self: start;
+  }
+
+  .smart-review-plan-group-heading {
+    align-items: flex-start;
   }
 }

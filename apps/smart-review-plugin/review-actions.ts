@@ -80,6 +80,9 @@ export async function markFileReviewed(
     frontmatter.review_interval_days = reviewResult.intervalDays;
     frontmatter.review_ease = reviewResult.ease;
     frontmatter.review_lapses = reviewLapses;
+    frontmatter.review_status = "active";
+    delete frontmatter.review_paused_at;
+    delete frontmatter.review_resume_at;
     reorderReviewFrontmatter(frontmatter);
 
     historyEntry = {
