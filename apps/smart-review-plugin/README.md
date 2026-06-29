@@ -21,6 +21,8 @@ Review Center 的评分按钮会显示每篇笔记当前计算出的实际间隔
 - 同一篇文章的每次掌握检验都追加到同一个 Markdown 成长记录。
 - AI 检验显示参考答案、原文证据、缺失点和高/中/低置信度。
 - 支持 OpenAI-compatible、OpenAI、Anthropic、Gemini、Azure OpenAI 和 Ollama。
+- 掌握记录目录是相对当前 Vault 根目录的路径，可在设置中直接选择已有目录。
+- OpenAI-compatible 支持基础地址和完整 chat-completions 地址；如果中转站不开放模型列表，可以手动填写模型名后直接测试连接。
 - API Key 保存在 Vault 内的插件 `data.json`，Obsidian 不会加密该文件；同步 Obsidian 配置时它也可能被同步。
 - 只有用户主动发起检验时，当前文章和回答才会发送到所选服务商；不包含其他笔记或客户端遥测。
 

@@ -1,4 +1,4 @@
-import { AbstractInputSuggest, App, PluginSettingTab, Setting, type TFolder } from "obsidian";
+import { AbstractInputSuggest, App, FuzzySuggestModal, PluginSettingTab, Setting, type TFolder } from "obsidian";
 import type SmartReviewPlugin from "./main";
 import { DEFAULT_REVIEW_INTERVAL_RULES, type ReviewIntervalRules, type ReviewRating } from "@smart-review/shared";
 import { resolveSmartReviewLocale, t, type SmartReviewLanguageSetting } from "./i18n";
@@ -422,9 +422,17 @@ export class SmartReviewSettingTab extends PluginSettingTab {
             this.plugin.settings.masteryRecordsPath = value.trim() || DEFAULT_SETTINGS.masteryRecordsPath;
             await this.plugin.saveSettings();
           });
-      });
+      })
+      .addButton((button) => button.setButtonText(t(locale, "selectFolder")).onClick(() => {
+        new FolderPickerModal(this.app, t(locale, "selectFolder"), async (folder) => {
+          this.plugin.settings.masteryRecordsPath = folder.path;
+          await this.plugin.saveSettings();
+          this.display();
+        }).open();
+      }));
 
     this.renderConnectionRoleSettings(containerEl, locale);
+    containerEl.createEl("p", { text: t(locale, "aiExaminerRulesSummary"), cls: "smart-review-setting-note" });
     for (const connection of this.plugin.settings.aiConnections) {
       this.renderAiConnection(containerEl, locale, connection);
     }
@@ -658,5 +666,24 @@ class FolderInputSuggest extends AbstractInputSuggest<TFolder> {
   override selectSuggestion(folder: TFolder): void {
     this.setValue(folder.path);
     this.close();
+  }
+}
+
+class FolderPickerModal extends FuzzySuggestModal<TFolder> {
+  constructor(app: App, placeholder: string, private readonly onChoose: (folder: TFolder) => void | Promise<void>) {
+    super(app);
+    this.setPlaceholder(placeholder);
+  }
+
+  getItems(): TFolder[] {
+    return this.app.vault.getAllFolders(false);
+  }
+
+  getItemText(folder: TFolder): string {
+    return folder.path;
+  }
+
+  onChooseItem(folder: TFolder): void {
+    void this.onChoose(folder);
   }
 }

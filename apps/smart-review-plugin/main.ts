@@ -337,7 +337,7 @@ export default class SmartReviewPlugin extends Plugin {
     } catch (error) {
       notice.hide();
       console.error("Failed to discover AI models", error);
-      new Notice(t(this.locale, "modelDiscoveryFailed", { error: getErrorMessage(error) }), 8_000);
+      new Notice(`${t(this.locale, "manualModelRequired")} ${t(this.locale, "modelDiscoveryFailed", { error: getErrorMessage(error) })}`, 8_000);
     }
   }
 

@@ -55,6 +55,7 @@ export class MasteryExamModal extends Modal {
   }
 
   override onOpen(): void {
+    this.modalEl.addClass("smart-review-mastery-modal-shell");
     this.contentEl.empty();
     this.contentEl.addClass("smart-review-mastery-modal");
     this.contentEl.createEl("h2", { text: t(this.locale, this.definition.stage === "recheck" ? "masteryRecheckTitle" : "masteryExamTitle") });
@@ -89,6 +90,7 @@ export class MasteryExamModal extends Modal {
         this.close();
         await this.onSubmit(answers);
       }));
+    actions.settingEl.addClass("smart-review-mastery-actions");
     if (this.hadInitialDraft) {
       actions.addButton((button) => button.setButtonText(t(this.locale, "discardDraft")).setWarning().onClick(async () => {
         this.submitted = true;
@@ -99,6 +101,7 @@ export class MasteryExamModal extends Modal {
   }
 
   override onClose(): void {
+    this.modalEl.removeClass("smart-review-mastery-modal-shell");
     if (!this.submitted && [...this.answers.values()].some((answer) => answer.trim().length > 0)) {
       void this.onSaveDraft(this.collectAnswers());
     }
@@ -119,6 +122,7 @@ export class MasteryResultModal extends Modal {
   }
 
   override onOpen(): void {
+    this.modalEl.addClass("smart-review-mastery-modal-shell");
     this.contentEl.empty();
     this.contentEl.addClass("smart-review-mastery-modal");
     this.contentEl.createEl("h2", { text: t(this.locale, "masteryResultTitle") });
@@ -146,6 +150,7 @@ export class MasteryResultModal extends Modal {
   }
 
   override onClose(): void {
+    this.modalEl.removeClass("smart-review-mastery-modal-shell");
     this.contentEl.empty();
   }
 }

@@ -153,7 +153,10 @@ export class ReviewCenterView extends ItemView {
     }
 
     for (const group of PLAN_GROUPS) {
-      this.renderPlanGroup(section, group, items.filter((item) => item.review_state === group.state));
+      const groupItems = items.filter((item) => item.review_state === group.state);
+      if (groupItems.length > 0) {
+        this.renderPlanGroup(section, group, groupItems);
+      }
     }
 
     this.renderLifecycleGroup(section, "paused", t(this.plugin.locale, "pausedGroup"), index.paused_items ?? []);
@@ -265,6 +268,10 @@ export class ReviewCenterView extends ItemView {
   }
 
   private renderLifecycleGroup(container: HTMLElement, key: string, titleText: string, items: ReviewItem[]): void {
+    if (items.length === 0) {
+      return;
+    }
+
     const section = container.createDiv({ cls: `smart-review-plan-group smart-review-plan-group-${key}` });
     const heading = section.createDiv({ cls: "smart-review-plan-group-heading" });
     const title = heading.createDiv({ cls: "smart-review-plan-group-title" });
@@ -272,20 +279,18 @@ export class ReviewCenterView extends ItemView {
     title.createSpan({ cls: "smart-review-subtle-badge", text: String(items.length) });
 
     const expanded = this.expandedLifecycleGroups.has(key);
-    if (items.length > 0) {
-      const toggle = heading.createEl("button", { cls: "smart-review-link-button", text: expanded ? t(this.plugin.locale, "collapse") : t(this.plugin.locale, "expandAll") });
-      toggle.onclick = () => {
-        if (expanded) {
-          this.expandedLifecycleGroups.delete(key);
-        } else {
-          this.expandedLifecycleGroups.add(key);
-        }
-        this.render();
-      };
-    }
+    const toggle = heading.createEl("button", { cls: "smart-review-link-button", text: expanded ? t(this.plugin.locale, "collapse") : t(this.plugin.locale, "expandAll") });
+    toggle.onclick = () => {
+      if (expanded) {
+        this.expandedLifecycleGroups.delete(key);
+      } else {
+        this.expandedLifecycleGroups.add(key);
+      }
+      this.render();
+    };
 
-    if (!expanded || items.length === 0) {
-      section.createDiv({ cls: "smart-review-empty-state smart-review-empty-inline", text: items.length === 0 ? t(this.plugin.locale, "noManagedNotes") : t(this.plugin.locale, "collapsedHint") });
+    if (!expanded) {
+      section.createDiv({ cls: "smart-review-empty-state smart-review-empty-inline", text: t(this.plugin.locale, "collapsedHint") });
       return;
     }
 

@@ -1,7 +1,7 @@
 {
   "id": "smart-review",
   "name": "Smart Review",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "minAppVersion": "1.8.7",
   "description": "Adaptive note review center with pause controls, history, and optional BYOK AI mastery exams.",
   "author": "Jayce",

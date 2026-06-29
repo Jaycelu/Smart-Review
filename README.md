@@ -73,11 +73,20 @@ Pausing is a scheduling decision and does not mark a note as mastered. Paused no
 
 AI mastery exams are optional and require a configured model. They generate closed-book questions, grade answers against article-grounded criteria, show reference answers after submission, independently verify qualifying results, and require a delayed recheck before marking a note mastered. Confidence is derived from source-evidence coverage and agreement between the examiner and verifier, not from a model-provided percentage alone.
 
-Every source article uses one longitudinal Markdown mastery record. Failed attempts, retries, and delayed rechecks append new `Attempt N` sections to the same file. The default folder is `Smart Review/Mastery Records`, and missing folders are created automatically.
+Every source article uses one longitudinal Markdown mastery record. Failed attempts, retries, and delayed rechecks append new `Attempt N` sections to the same file. The default folder is `Smart Review/Mastery Records`, and missing folders are created automatically. The folder path is relative to the vault root; use `00-Overview/Smart Review/Mastery Records` if you want the records under an existing folder.
 
 ## AI Provider Setup and Network Disclosure
 
-AI mastery exams use bring-your-own-key connections. Supported connection types are OpenAI, OpenAI-compatible, Anthropic, Google Gemini, Azure OpenAI, and Ollama. OpenAI-compatible endpoints cover services such as OpenRouter, DeepSeek, Groq, SiliconFlow, Together, LM Studio, and vLLM when they expose compatible chat APIs.
+AI mastery exams use bring-your-own-key connections. Supported connection types are OpenAI, OpenAI-compatible, Anthropic, Google Gemini, Azure OpenAI, and Ollama. OpenAI-compatible endpoints cover services such as OpenRouter, AIHubMix, DeepSeek, Groq, SiliconFlow, Together, LM Studio, and vLLM when they expose compatible chat APIs.
+
+For OpenAI-compatible providers, enter either the base URL or a full chat endpoint. Examples:
+
+- OpenAI: `https://api.openai.com/v1`
+- OpenRouter: `https://openrouter.ai/api/v1`
+- AIHubMix: `https://aihubmix.com/v1`
+- Full endpoint form: `https://example.com/v1/chat/completions`
+
+Model discovery is optional. Some gateways do not expose `/models`; in that case, manually enter the model name and use **Test** to verify the chat endpoint. OpenRouter may require optional custom headers such as `HTTP-Referer` and `X-OpenRouter-Title`.
 
 - No Smart Review account or payment is required.
 - Only the current source article, generated exam, and submitted answers are sent to the provider selected by the user.
@@ -87,6 +96,14 @@ AI mastery exams use bring-your-own-key connections. Supported connection types 
 - The plugin does not include client-side telemetry or advertising.
 
 Provider data retention and training policies are controlled by the selected provider. Review those terms before sending sensitive notes.
+
+## What's New in 0.3.1
+
+- Added clearer mastery record folder selection and vault-relative path guidance.
+- Improved OpenAI-compatible URL handling for provider gateways such as OpenRouter and AIHubMix.
+- Made model discovery optional when a gateway does not expose `/models`.
+- Clarified examiner/verifier roles and mastery grading logic in settings.
+- Reduced empty Review Center plan sections and improved the mastery exam modal layout.
 
 ## What's New in 0.3.0
 

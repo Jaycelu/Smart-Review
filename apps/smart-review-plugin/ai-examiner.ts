@@ -62,7 +62,7 @@ export async function listAiModels(connection: AiConnectionSettings): Promise<st
     ? `${baseUrl}/api/tags`
     : connection.provider === "gemini"
       ? `${baseUrl}/models${connection.apiKey.length > 0 ? `?key=${encodeURIComponent(connection.apiKey)}` : ""}`
-      : `${baseUrl}/models`;
+      : getOpenAiModelsUrl(baseUrl);
   const headers = connection.provider === "anthropic"
     ? { "anthropic-version": "2023-06-01", "x-api-key": connection.apiKey, ...customHeaders }
     : connection.provider === "openai" || connection.provider === "openai-compatible"
@@ -158,7 +158,7 @@ function buildRequest(connection: AiConnectionSettings, messages: AiMessage[]): 
   }
 
   return {
-    url: `${baseUrl}/chat/completions`,
+    url: getOpenAiChatCompletionsUrl(baseUrl),
     headers: {
       "content-type": "application/json",
       ...(connection.apiKey.length > 0 ? { authorization: `Bearer ${connection.apiKey}` } : {}),
@@ -248,6 +248,18 @@ function getRequiredString(record: Record<string, unknown>, key: string): string
 
 function trimSlash(value: string): string {
   return value.replace(/\/+$/, "");
+}
+
+function getOpenAiChatCompletionsUrl(baseUrl: string): string {
+  if (/\/chat\/completions$/i.test(baseUrl)) {
+    return baseUrl;
+  }
+  return `${baseUrl}/chat/completions`;
+}
+
+function getOpenAiModelsUrl(baseUrl: string): string {
+  const withoutChatEndpoint = baseUrl.replace(/\/chat\/completions$/i, "");
+  return `${withoutChatEndpoint}/models`;
 }
 
 function uniqueSorted(values: string[]): string[] {
