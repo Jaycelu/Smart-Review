@@ -350,6 +350,65 @@
   border-color: color-mix(in srgb, var(--interactive-accent) 35%, var(--background-modifier-border));
 }
 
+.smart-review-lifecycle-overview {
+  margin-top: 12px;
+  border: 1px solid var(--smart-review-border);
+  border-radius: var(--radius-m);
+  padding: 10px 12px;
+  background: var(--smart-review-card-bg);
+}
+
+.smart-review-lifecycle-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.smart-review-lifecycle-heading h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.smart-review-lifecycle-caption {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.45;
+}
+
+.smart-review-lifecycle-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.smart-review-lifecycle-chip {
+  height: auto;
+  min-height: 28px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  box-shadow: none;
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  line-height: 1.35;
+}
+
+.smart-review-lifecycle-chip:hover,
+.smart-review-lifecycle-chip-active {
+  border-color: var(--interactive-accent);
+  background: var(--smart-review-accent-soft);
+  color: var(--text-accent);
+}
+
+.smart-review-lifecycle-overview .smart-review-plan-group {
+  margin-top: 10px;
+}
+
 .smart-review-managed-item {
   grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
 }
