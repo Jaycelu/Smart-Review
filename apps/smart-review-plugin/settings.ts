@@ -423,9 +423,9 @@ export class SmartReviewSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       })
-      .addButton((button) => button.setButtonText(t(locale, "selectFolder")).onClick(() => {
-        new FolderPickerModal(this.app, t(locale, "selectFolder"), async (folder) => {
-          this.plugin.settings.masteryRecordsPath = folder.path;
+      .addButton((button) => button.setButtonText(t(locale, "selectParentFolder")).onClick(() => {
+        new FolderPickerModal(this.app, t(locale, "selectParentFolder"), async (folder) => {
+          this.plugin.settings.masteryRecordsPath = buildMasteryRecordsPath(folder.path);
           await this.plugin.saveSettings();
           this.display();
         }).open();
@@ -651,6 +651,13 @@ function parsePositiveInteger(value: string, fallback: number): number {
 function parsePositiveNumber(value: string, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function buildMasteryRecordsPath(parentPath: string): string {
+  const cleaned = parentPath.replace(/^\/+|\/+$/g, "");
+  return cleaned.length === 0
+    ? DEFAULT_SETTINGS.masteryRecordsPath
+    : `${cleaned}/${DEFAULT_SETTINGS.masteryRecordsPath}`;
 }
 
 class FolderInputSuggest extends AbstractInputSuggest<TFolder> {

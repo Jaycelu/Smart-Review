@@ -73,7 +73,7 @@ Pausing is a scheduling decision and does not mark a note as mastered. Paused no
 
 AI mastery exams are optional and require a configured model. They generate closed-book questions, grade answers against article-grounded criteria, show reference answers after submission, independently verify qualifying results, and require a delayed recheck before marking a note mastered. Confidence is derived from source-evidence coverage and agreement between the examiner and verifier, not from a model-provided percentage alone.
 
-Every source article uses one longitudinal Markdown mastery record. Failed attempts, retries, and delayed rechecks append new `Attempt N` sections to the same file. The default folder is `Smart Review/Mastery Records`, and missing folders are created automatically. The folder path is relative to the vault root; use `00-Overview/Smart Review/Mastery Records` if you want the records under an existing folder.
+Every source article uses one longitudinal Markdown mastery record. Failed attempts, retries, and delayed rechecks append new `Attempt N` sections to the same file. The default folder is `Smart Review/Mastery Records`, and missing folders are created automatically. In settings, choosing a parent folder such as `00-Overview` stores records under `00-Overview/Smart Review/Mastery Records`.
 
 ## AI Provider Setup and Network Disclosure
 

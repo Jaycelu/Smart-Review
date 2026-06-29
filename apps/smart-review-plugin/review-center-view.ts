@@ -273,7 +273,6 @@ export class ReviewCenterView extends ItemView {
     const overview = container.createDiv({ cls: "smart-review-lifecycle-overview" });
     const heading = overview.createDiv({ cls: "smart-review-lifecycle-heading" });
     heading.createEl("h3", { text: t(this.plugin.locale, "lifecycleManagement") });
-    heading.createSpan({ cls: "smart-review-lifecycle-caption", text: t(this.plugin.locale, "lifecycleManagementDesc") });
 
     const chips = overview.createDiv({ cls: "smart-review-lifecycle-chips" });
     for (const group of groups) {
